@@ -427,3 +427,10 @@ body.vat-excl .only-excl { display: inline; }
 .brand { flex: none; }
 .brand svg { width: 207px; height: 46px; }
 @media (max-width: 420px) { .brand svg { width: 171px; height: 38px; } }
+
+/* Datums wijzigen in de winkelwagen */
+.cart-edit-link { margin: 0 0 6px; }
+.cart-edit { margin: 10px 0 14px; padding: 16px; border: 1.5px solid var(--green); border-radius: var(--radius-sm); background: var(--white); max-width: 420px; }
+.cart-edit-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+.cart-edit-actions .btn { padding: .6em 1.1em; font-size: .92rem; }
+.cal-day.start:hover:not(:disabled), .cal-day.end:hover:not(:disabled) { background: var(--green-dark); color: var(--white); }

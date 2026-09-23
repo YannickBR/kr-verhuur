@@ -52,6 +52,9 @@ window.KR = window.KR || {};
       write(items);
       return item;
     },
+    update(key, patch) {
+      write(read().map((i) => (i.key === key ? Object.assign({}, i, patch) : i)));
+    },
     remove(key) {
       write(read().filter((i) => i.key !== key));
     },
@@ -59,10 +62,11 @@ window.KR = window.KR || {};
       write([]);
     },
     // Aantal stuks van een artikel dat per dag al in de winkelwagen zit: { "YYYY-MM-DD": n }
-    usage(productId) {
+    // Met exceptKey telt die ene regel niet mee (handig bij het wijzigen van zijn datums).
+    usage(productId, exceptKey) {
       const out = {};
       read()
-        .filter((i) => Number(i.product_id) === Number(productId))
+        .filter((i) => Number(i.product_id) === Number(productId) && i.key !== exceptKey)
         .forEach((i) => {
           const d = new Date(i.start + "T12:00:00");
           const end = new Date(i.end + "T12:00:00");

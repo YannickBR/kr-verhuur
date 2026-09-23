@@ -22,6 +22,8 @@
   let checking = false;
   let busy = false;
   const saved = {}; // ingevulde klantgegevens bewaren bij opnieuw tekenen
+  // Regel waarvan de datums gewijzigd worden: { key, start, end, days, data: {dates, max_days, stock} | null }
+  let editing = null;
 
   const period = (i) => D.pretty(i.start) + (i.days > 1 ? " t/m " + D.pretty(i.end) : "") + " · " + i.days + (i.days === 1 ? " dag" : " dagen");
   const payload = (i) => ({ product_id: i.product_id, start: i.start, end: i.end, quantity: i.quantity, extras: i.extras });
@@ -95,6 +97,11 @@
           '<div class="cart-item-main">' +
           '<h3><a href="' + esc(item.url) + '">' + (item.quantity > 1 ? esc(item.quantity) + "× " : "") + esc(item.name) + "</a></h3>" +
           '<p class="cart-period">' + (icons.calendar || "") + esc(period(item)) + "</p>" +
+          (editing && editing.key === item.key
+            ? '<div class="cart-edit"><div class="cart-edit-cal">' + (editing.data ? "" : '<p class="cal-hint">Beschikbaarheid laden…</p>') + "</div>" +
+              '<div class="cart-edit-actions"><button type="button" class="btn btn-primary" data-edit-save' + (editing.start ? "" : " disabled") + ">Datums opslaan</button>" +
+              '<button type="button" class="btn btn-outline" data-edit-cancel>Annuleren</button></div></div>'
+            : '<p class="cart-edit-link"><button type="button" class="link-btn" data-edit="' + esc(item.key) + '">Datums wijzigen</button></p>') +
           (lines
             ? '<ul class="cart-lines">' + lines.map((l) => "<li><span>" + esc(l.label) + "</span><span>" + show(l.amount) + "</span></li>").join("") + "</ul>"
             : item.extraLabels && item.extraLabels.length
@@ -132,18 +139,83 @@
       "</div>" +
       '<div class="summary">' + (CFG.vatToggle || "") + totalsHtml(total) +
       '<div class="summary-note">' + (deposit ? "Excl. borg van " + euro(deposit) + ". " : "") + "Je ontvangt een bevestiging per e-mail; wij bevestigen de beschikbaarheid zo snel mogelijk.</div></div>" +
-      '<button class="btn btn-primary btn-block" id="checkout-btn" type="submit"' + (problems || checking || busy ? " disabled" : "") + ">" +
+      '<button class="btn btn-primary btn-block" id="checkout-btn" type="submit"' + (problems || checking || busy || editing ? " disabled" : "") + ">" +
       (busy ? "Bezig met versturen…" : "Bestelling plaatsen") + "</button>" +
       (problems ? '<p class="cart-error">Los eerst de melding' + (problems > 1 ? "en" : "") + " bij je artikelen op.</p>" : "") +
+      (editing && !problems ? '<p class="summary-note">Sla eerst de gewijzigde datums op of klik op Annuleren.</p>' : "") +
       '<div id="checkout-msg" aria-live="polite"></div>' +
       "</form></aside></div>";
     KR.vat.apply(root);
+    mountEditCalendar();
+  }
+
+  // Kalender in de regel die gewijzigd wordt.
+  function mountEditCalendar() {
+    if (!editing || !editing.data) return;
+    const el = root.querySelector(".cart-edit-cal");
+    const item = KR.cart.items().find((i) => i.key === editing.key);
+    if (!el || !item) return;
+    const dates = editing.data.dates || {};
+    const stock = Number(editing.data.stock) || 1;
+    const others = KR.cart.usage(item.product_id, item.key); // andere regels van hetzelfde artikel
+    const qty = Number(item.quantity) || 1;
+    const saveBtn = root.querySelector("[data-edit-save]");
+    KR.Calendar(el, {
+      isBooked: (iso) => (iso in dates ? Number(dates[iso]) : stock) - (others[iso] || 0) < qty,
+      today: CFG.today,
+      minDate: D.iso(D.addDays(D.parse(CFG.today), Number(CFG.minLead) || 0)),
+      maxDate: D.iso(D.addDays(D.parse(CFG.today), Number(CFG.maxAhead) || 365)),
+      maxDays: Number(editing.data.max_days) || 365,
+      start: editing.start,
+      end: editing.end,
+      icons,
+      onChange(sel) {
+        editing.start = sel.start;
+        editing.end = sel.end;
+        editing.days = sel.days;
+        if (saveBtn) saveBtn.disabled = !sel.start;
+      },
+    });
+  }
+
+  async function startEdit(key) {
+    const item = KR.cart.items().find((i) => i.key === key);
+    if (!item) return;
+    editing = { key, start: item.start, end: item.end, days: item.days, data: null };
+    render();
+    try {
+      const res = await fetch(CFG.restUrl + "availability/" + item.product_id + "?meta=1", { headers: { Accept: "application/json" } });
+      const data = await res.json();
+      if (editing && editing.key === key) editing.data = res.ok ? data : { dates: {}, stock: 1, max_days: 365 };
+    } catch (e) {
+      if (editing && editing.key === key) editing.data = { dates: {}, stock: 1, max_days: 365 };
+    }
+    render();
   }
 
   root.addEventListener("click", (e) => {
-    const btn = e.target.closest("[data-remove]");
-    if (!btn) return;
-    KR.cart.remove(btn.dataset.remove);
+    const rm = e.target.closest("[data-remove]");
+    if (rm) {
+      if (editing && editing.key === rm.dataset.remove) editing = null;
+      KR.cart.remove(rm.dataset.remove);
+      return;
+    }
+    const edit = e.target.closest("[data-edit]");
+    if (edit) {
+      startEdit(edit.dataset.edit);
+      return;
+    }
+    if (e.target.closest("[data-edit-cancel]")) {
+      editing = null;
+      render();
+      return;
+    }
+    if (e.target.closest("[data-edit-save]") && editing && editing.start) {
+      const patch = { start: editing.start, end: editing.end || editing.start, days: editing.days || 1 };
+      const key = editing.key;
+      editing = null;
+      KR.cart.update(key, patch); // → krv:cart → opnieuw controleren en tonen
+    }
   });
 
   root.addEventListener("submit", async (e) => {

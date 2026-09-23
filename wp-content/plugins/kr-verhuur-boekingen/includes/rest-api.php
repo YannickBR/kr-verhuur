@@ -3,6 +3,7 @@
  * REST API voor de website.
  *
  *   GET  /wp-json/kr/v1/availability/<product_id>  → { "2026-10-03": 0, ... } (resterende voorraad)
+ *        ?meta=1                                   → { dates: {...}, max_days, stock }
  *   POST /wp-json/kr/v1/cart/validate              → controleer winkelwagenregels (prijs + beschikbaarheid)
  *   POST /wp-json/kr/v1/bookings                   → bestelling plaatsen: alle regels uit de winkelwagen in één keer
  */
@@ -23,7 +24,13 @@ function krv_register_rest() {
 				if ( ! krv_get_product( $id ) || 'publish' !== get_post_status( $id ) ) {
 					return new WP_Error( 'krv_product', 'Onbekend artikel.', array( 'status' => 404 ) );
 				}
-				$res = rest_ensure_response( (object) krv_availability( $id ) );
+				$dates = (object) krv_availability( $id );
+				if ( $r->get_param( 'meta' ) ) {
+					// Voor de winkelwagen: ook max. aantal dagen en voorraad.
+					$p     = krv_get_product( $id );
+					$dates = array( 'dates' => $dates, 'max_days' => $p['max_days'], 'stock' => $p['stock'] );
+				}
+				$res = rest_ensure_response( $dates );
 				$res->header( 'Cache-Control', 'no-store' );
 				return $res;
 			},

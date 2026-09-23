@@ -64,7 +64,7 @@ E-mailadres, telefoonnummer, bedrijfsnaam en werkgebied staan bij **Boekingen �
 
 1. De klant kiest op de productpagina één dag (één klik) of een periode (twee klikken). Volgeboekte dagen zijn doorgestreept; bij artikelen met voorraad telt het gekozen aantal mee, inclusief wat al in de winkelwagen zit.
 2. De klant kiest extra opties, ziet de prijs en klikt **In winkelwagen**. Zo kunnen meerdere artikelen (elk met een eigen periode) verzameld worden. Het winkelwagen-icoon in de header toont het aantal.
-3. Op **/winkelwagen/** worden prijzen en beschikbaarheid live gecontroleerd. De klant vult één keer zijn gegevens in (afleveradres alleen als er halen en brengen is gekozen) en klikt **Bestelling plaatsen**.
+3. Op **/winkelwagen/** worden prijzen en beschikbaarheid live gecontroleerd. Per artikel kan de klant met **Datums wijzigen** een andere periode kiezen (kalender met bezette dagen, huidige periode voorgeselecteerd). De klant vult één keer zijn gegevens in (afleveradres alleen als er halen en brengen is gekozen) en klikt **Bestelling plaatsen**.
 4. Alle artikelen worden samen gecontroleerd en opgeslagen als boekingen met één bestelnummer en status **Aanvraag**. De beheerder krijgt één e-mail met de hele bestelling, de klant één overzicht. Aanvragen blokkeren de agenda direct.
 5. De beheerder bevestigt de boekingen in wp-admin. In de lijst en op het bewerkscherm zie je welke boekingen bij dezelfde bestelling horen.
 

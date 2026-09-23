@@ -3,6 +3,7 @@
  *
  *   const cal = KR.Calendar(el, {
  *     isBooked(iso) → true/false,  // dag (voor het gekozen aantal) niet beschikbaar
+ *     start, end,                  // optioneel: vooraf geselecteerde periode ("YYYY-MM-DD")
  *     minDate, maxDate,            // "YYYY-MM-DD"
  *     today,                       // "YYYY-MM-DD" (tijdzone van de site)
  *     maxDays: 7,                  // maximale lengte van een periode
@@ -42,10 +43,10 @@ KR.Calendar = function (el, opts) {
   const maxIso = opts.maxDate || D.iso(D.addDays(D.parse(todayIso), 365));
   const maxDays = opts.maxDays || 365;
 
-  let view = D.parse(minIso);
+  let start = opts.start || null;
+  let end = opts.start ? opts.end || opts.start : null;
+  let view = D.parse(start && start >= minIso ? start : minIso);
   view = new Date(view.getFullYear(), view.getMonth(), 1);
-  let start = null;
-  let end = null;
   let message = "";
 
   const available = (iso) => iso >= minIso && iso <= maxIso && !isBooked(iso);

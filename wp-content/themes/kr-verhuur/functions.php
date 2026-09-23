@@ -71,6 +71,9 @@ add_action(
 					'catalogUrl' => krt_catalog_url(),
 					'homeUrl'    => home_url( '/' ),
 					'vatToggle'  => krt_vat_toggle( 'vat-toggle-cart' ),
+					'today'      => krv_today(),
+					'minLead'    => (int) krv_setting( 'min_lead_days' ),
+					'maxAhead'   => (int) krv_setting( 'max_days_ahead' ),
 					'icons'      => krt_icons_for_js(),
 				)
 			);
