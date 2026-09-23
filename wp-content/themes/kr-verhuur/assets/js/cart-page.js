@@ -214,7 +214,17 @@
       const patch = { start: editing.start, end: editing.end || editing.start, days: editing.days || 1 };
       const key = editing.key;
       editing = null;
-      KR.cart.update(key, patch); // → krv:cart → opnieuw controleren en tonen
+      if (typeof KR.cart.update === "function") {
+        KR.cart.update(key, patch); // → krv:cart → opnieuw controleren en tonen
+      } else {
+        // Terugval als een oude cart.js uit de browsercache geladen is: regel vervangen.
+        const item = KR.cart.items().find((i) => i.key === key);
+        if (item) {
+          KR.cart.remove(key);
+          KR.cart.add(Object.assign({}, item, patch));
+        }
+        validate();
+      }
     }
   });
 

@@ -8,7 +8,16 @@
 
 defined( 'ABSPATH' ) || exit;
 
-define( 'KRT_VERSION', '1.1.0' );
+define( 'KRT_VERSION', '1.2.0' );
+
+/**
+ * Versie van een themabestand op basis van de wijzigingsdatum. Na elke update krijgt
+ * het bestand zo een nieuwe URL en laden browsers en caches nooit een oude versie.
+ */
+function krt_asset_ver( $rel ) {
+	$file = get_template_directory() . '/' . ltrim( $rel, '/' );
+	return file_exists( $file ) ? KRT_VERSION . '.' . filemtime( $file ) : KRT_VERSION;
+}
 
 require_once get_template_directory() . '/inc/template-tags.php';
 
@@ -40,13 +49,13 @@ add_action(
 	function () {
 		$uri = get_template_directory_uri();
 		wp_enqueue_style( 'krt-fonts', 'https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&display=swap', array(), null );
-		wp_enqueue_style( 'krt-main', $uri . '/assets/css/main.css', array(), KRT_VERSION );
-		wp_enqueue_script( 'krt-nav', $uri . '/assets/js/nav.js', array(), KRT_VERSION, true );
+		wp_enqueue_style( 'krt-main', $uri . '/assets/css/main.css', array(), krt_asset_ver( '/assets/css/main.css' ) );
+		wp_enqueue_script( 'krt-nav', $uri . '/assets/js/nav.js', array(), krt_asset_ver( '/assets/js/nav.js' ), true );
 
 		if ( ! krt_has_plugin() ) {
 			return;
 		}
-		wp_enqueue_script( 'krt-cart', $uri . '/assets/js/cart.js', array(), KRT_VERSION, true );
+		wp_enqueue_script( 'krt-cart', $uri . '/assets/js/cart.js', array(), krt_asset_ver( '/assets/js/cart.js' ), true );
 		wp_localize_script(
 			'krt-cart',
 			'KRV_VAT',
@@ -60,8 +69,8 @@ add_action(
 		);
 
 		if ( krv_is_cart() ) {
-			wp_enqueue_script( 'krt-calendar', $uri . '/assets/js/calendar.js', array(), KRT_VERSION, true );
-			wp_enqueue_script( 'krt-cart-page', $uri . '/assets/js/cart-page.js', array( 'krt-cart', 'krt-calendar' ), KRT_VERSION, true );
+			wp_enqueue_script( 'krt-calendar', $uri . '/assets/js/calendar.js', array(), krt_asset_ver( '/assets/js/calendar.js' ), true );
+			wp_enqueue_script( 'krt-cart-page', $uri . '/assets/js/cart-page.js', array( 'krt-cart', 'krt-calendar' ), krt_asset_ver( '/assets/js/cart-page.js' ), true );
 			wp_localize_script(
 				'krt-cart-page',
 				'KRV_CART',
@@ -81,8 +90,8 @@ add_action(
 
 		if ( is_singular( 'kr_product' ) ) {
 			$p = krv_get_product( get_queried_object_id() );
-			wp_enqueue_script( 'krt-calendar', $uri . '/assets/js/calendar.js', array(), KRT_VERSION, true );
-			wp_enqueue_script( 'krt-booking', $uri . '/assets/js/booking.js', array( 'krt-calendar', 'krt-cart' ), KRT_VERSION, true );
+			wp_enqueue_script( 'krt-calendar', $uri . '/assets/js/calendar.js', array(), krt_asset_ver( '/assets/js/calendar.js' ), true );
+			wp_enqueue_script( 'krt-booking', $uri . '/assets/js/booking.js', array( 'krt-calendar', 'krt-cart' ), krt_asset_ver( '/assets/js/booking.js' ), true );
 
 			// Prijzen gaan altijd incl. btw naar de JS; die rekent zo nodig om voor weergave.
 			$all_extras = krv_extras_incl();
