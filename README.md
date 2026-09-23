@@ -46,6 +46,20 @@ Tip: installeer een SMTP-plugin (bijv. WP Mail SMTP) zodat bevestigingsmails bet
 - Bij excl. btw toont de winkelwagen subtotaal excl. btw, het btw-bedrag en het totaal incl. btw.
 - Boekingen slaan het bedrag altijd **incl. btw** op (wat de klant betaalt); in het beheer staat het btw-bedrag erbij. De borg valt buiten de btw.
 
+## E-mails
+
+Alle e-mails zijn HTML-mails in de huisstijl (logo, kleuren, overzicht van de bestelling met btw-opbouw) met een tekstversie voor e-mailprogramma's zonder HTML.
+
+- **Bestelling ontvangen** – naar de klant, direct na het bestellen. Tegelijk krijg jij een melding met een knop naar de bestelling in het beheer.
+- **Reservering bevestigd / geannuleerd** – naar de klant als je in de boeking "E-mail klant" aanvinkt. Je kunt dan een **persoonlijk bericht** voor die klant toevoegen; bij een bestelling met meerdere artikelen geldt de status (en de mail) standaard voor de hele bestelling.
+- Teksten (onderwerp, kop, bericht, groet en voettekst) pas je aan bij **Boekingen → Instellingen → E-mails aan klanten**, met codes als `{voornaam}` en `{bestelnummer}`. Per e-mail is er een **voorbeeld** en je kunt een **testmail** naar jezelf sturen.
+- E-mails worden verstuurd vanaf het e-mailadres bij *Bedrijf & contact*. Gebruik een SMTP-plugin (bijv. WP Mail SMTP) zodat ze niet in de spam belanden.
+- Het logo in de e-mail is het logo uit *Weergave → Customizer → Site-identiteit* als je dat hebt ingesteld, anders het meegeleverde KR Verhuur-logo.
+
+## Contactgegevens aanpassen
+
+E-mailadres, telefoonnummer, bedrijfsnaam en werkgebied staan bij **Boekingen → Instellingen → Bedrijf & contact**. Ze worden gebruikt in de header/footer van de website, het contactblok op de homepage en in alle e-mails. Het adres waar meldingen van nieuwe bestellingen heen gaan stel je daar apart in.
+
 ## Hoe reserveren werkt (winkelwagen)
 
 1. De klant kiest op de productpagina één dag (één klik) of een periode (twee klikken). Volgeboekte dagen zijn doorgestreept; bij artikelen met voorraad telt het gekozen aantal mee, inclusief wat al in de winkelwagen zit.

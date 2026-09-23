@@ -507,7 +507,20 @@ function krv_booking_status_box( $post ) {
 				<option value="<?php echo esc_attr( $k ); ?>" <?php selected( $b['status'], $k ); ?>><?php echo esc_html( $l ); ?></option>
 			<?php endforeach; ?>
 		</select></p>
-	<p><label><input type="checkbox" name="krvb[notify]" value="1"> E-mail klant bij bevestigen/annuleren</label></p>
+	<?php $order_count = $b['request_id'] ? count( krv_request_bookings( $b['request_id'] ) ) : 1; ?>
+	<?php if ( $order_count > 1 ) : ?>
+		<p><label><input type="checkbox" name="krvb[whole_order]" value="1" checked> Status geldt voor de hele bestelling (<?php echo (int) $order_count; ?> artikelen)</label></p>
+	<?php endif; ?>
+	<p><label><input type="checkbox" name="krvb[notify]" value="1" id="krv_notify"> E-mail klant bij bevestigen/annuleren</label></p>
+	<p id="krv_personal_wrap"><label for="krv_personal"><strong>Persoonlijk bericht</strong> <span style="color:#646970">(optioneel, komt in de e-mail)</span></label>
+		<textarea id="krv_personal" name="krvb[personal]" rows="4" style="width:100%" placeholder="Bijv. We bezorgen zaterdag rond 9:00 uur. Veel plezier op het feest!"></textarea></p>
+	<script>
+	(function () {
+		var cb = document.getElementById('krv_notify'), wrap = document.getElementById('krv_personal_wrap');
+		function sync() { wrap.style.display = cb.checked ? '' : 'none'; }
+		cb.addEventListener('change', sync); sync();
+	})();
+	</script>
 	<p><label><input type="checkbox" name="krvb[paid]" value="1" <?php checked( $b['paid'] ); ?>> Betaald</label></p>
 	<p><label><input type="checkbox" name="krvb[force]" value="1"> Beschikbaarheid negeren <span style="color:#646970">(dubbel boeken toestaan)</span></label></p>
 	<?php if ( $b['lines'] ) : ?>
@@ -623,8 +636,20 @@ function krv_admin_save_booking( $post_id, $post ) {
 		krv_set_status( $post_id, $status );
 	}
 
+	// Status ook op de andere artikelen van dezelfde bestelling zetten.
+	$ids = array( $post_id );
+	$rid = get_post_meta( $post_id, '_krv_request_id', true );
+	if ( ! $is_new && ! empty( $in['whole_order'] ) && $rid ) {
+		$ids = krv_request_bookings( $rid );
+		foreach ( $ids as $other ) {
+			if ( (int) $other !== (int) $post_id ) {
+				krv_set_status( $other, $status );
+			}
+		}
+	}
+
 	if ( ! empty( $in['notify'] ) ) {
-		krv_send_status_mail( $post_id, $status );
+		krv_send_status_mail( $ids, $status, sanitize_textarea_field( isset( $in['personal'] ) ? $in['personal'] : '' ) );
 	}
 }
 add_action( 'save_post_kr_booking', 'krv_admin_save_booking', 10, 2 );

@@ -65,6 +65,15 @@ add_action(
 		}
 		update_option( 'krv_extras', $extras );
 
+		// E-mailteksten.
+		$texts = array();
+		$in_mail = isset( $_POST['krv_email'] ) ? wp_unslash( (array) $_POST['krv_email'] ) : array(); // phpcs:ignore WordPress.Security.ValidatedSanitizedInput
+		foreach ( krv_email_text_defaults() as $key => $default ) {
+			$val           = isset( $in_mail[ $key ] ) ? sanitize_textarea_field( $in_mail[ $key ] ) : $default;
+			$texts[ $key ] = '' === trim( $val ) ? $default : $val;
+		}
+		update_option( 'krv_email_texts', $texts );
+
 		// Goboony-link ook bij de huurgroep "camper" bijwerken als die nog naar Goboony wees.
 		$camper = get_term_by( 'slug', 'camper', 'kr_group' );
 		if ( $camper && false !== strpos( (string) get_term_meta( $camper->term_id, '_krv_external_url', true ), 'goboony' ) ) {
@@ -82,6 +91,13 @@ function krv_settings_page() {
 	?>
 	<div class="wrap">
 		<h1>KR Verhuur – instellingen</h1>
+		<?php if ( ! empty( $_GET['testmail'] ) ) : // phpcs:ignore WordPress.Security.NonceVerification ?>
+			<?php if ( 'ok' === $_GET['testmail'] ) : // phpcs:ignore WordPress.Security.NonceVerification ?>
+				<div class="notice notice-success is-dismissible"><p>Testmail verstuurd naar <?php echo esc_html( wp_get_current_user()->user_email ); ?>.</p></div>
+			<?php else : ?>
+				<div class="notice notice-error is-dismissible"><p>De testmail kon niet worden verstuurd. Controleer de e-mailinstellingen van je server (tip: installeer een SMTP-plugin zoals WP Mail SMTP).</p></div>
+			<?php endif; ?>
+		<?php endif; ?>
 		<?php if ( ! empty( $_GET['saved'] ) ) : // phpcs:ignore WordPress.Security.NonceVerification ?>
 			<div class="notice notice-success is-dismissible"><p>Instellingen opgeslagen.</p></div>
 		<?php endif; ?>
@@ -90,9 +106,10 @@ function krv_settings_page() {
 			<?php wp_nonce_field( 'krv_settings' ); ?>
 
 			<h2>Bedrijf & contact</h2>
+			<p class="description">Deze gegevens staan op de website (header, footer en contactblok op de homepage) en in alle e-mails. E-mails worden verstuurd vanaf het e-mailadres hieronder.</p>
 			<table class="form-table" role="presentation">
 				<tr><th><label for="company_name">Bedrijfsnaam</label></th><td><input class="regular-text" id="company_name" name="krv[company_name]" value="<?php echo esc_attr( $s['company_name'] ); ?>"></td></tr>
-				<tr><th><label for="email">E-mailadres (website)</label></th><td><input class="regular-text" type="email" id="email" name="krv[email]" value="<?php echo esc_attr( $s['email'] ); ?>"></td></tr>
+				<tr><th><label for="email">E-mailadres</label></th><td><input class="regular-text" type="email" id="email" name="krv[email]" value="<?php echo esc_attr( $s['email'] ); ?>"></td></tr>
 				<tr><th><label for="notify_email">Meldingen nieuwe boekingen naar</label></th><td><input class="regular-text" type="email" id="notify_email" name="krv[notify_email]" value="<?php echo esc_attr( $s['notify_email'] ); ?>"></td></tr>
 				<tr><th><label for="phone">Telefoonnummer</label></th><td><input class="regular-text" id="phone" name="krv[phone]" value="<?php echo esc_attr( $s['phone'] ); ?>"></td></tr>
 				<tr><th><label for="region">Plaats / werkgebied</label></th><td><input class="regular-text" id="region" name="krv[region]" value="<?php echo esc_attr( $s['region'] ); ?>"></td></tr>
@@ -156,8 +173,78 @@ function krv_settings_page() {
 				</tr>
 				</tbody>
 			</table>
+			<h2 id="emails">E-mails aan klanten</h2>
+			<p class="description">Pas de teksten aan naar je eigen toon. Je kunt deze codes gebruiken; ze worden automatisch ingevuld:
+				<?php foreach ( krv_email_placeholder_help() as $code => $help ) : ?>
+					<code><?php echo esc_html( $code ); ?></code> <?php echo esc_html( lcfirst( $help ) ); ?>;
+				<?php endforeach; ?>
+				Een lege regel maakt een nieuwe alinea.</p>
+			<?php
+			$texts = krv_email_texts();
+			$types = array(
+				'received'  => array( 'Bestelling ontvangen', 'Direct na het plaatsen van een bestelling.' ),
+				'confirmed' => array( 'Reservering bevestigd', 'Als je een boeking op "Bevestigd" zet en "E-mail klant" aanvinkt.' ),
+				'cancelled' => array( 'Reservering geannuleerd', 'Als je een boeking op "Geannuleerd" zet en "E-mail klant" aanvinkt.' ),
+			);
+			$preview = function ( $type ) {
+				return wp_nonce_url( admin_url( 'admin-post.php?action=krv_email_preview&type=' . $type ), 'krv_email_preview' );
+			};
+			?>
+			<?php foreach ( $types as $type => $info ) : ?>
+				<h3 style="margin-top:28px"><?php echo esc_html( $info[0] ); ?> <a class="button button-small" target="_blank" href="<?php echo esc_url( $preview( $type ) ); ?>">Voorbeeld bekijken</a></h3>
+				<p class="description"><?php echo esc_html( $info[1] ); ?></p>
+				<table class="form-table" role="presentation">
+					<tr><th><label for="m-<?php echo esc_attr( $type ); ?>-s">Onderwerp</label></th><td><input class="large-text" id="m-<?php echo esc_attr( $type ); ?>-s" name="krv_email[<?php echo esc_attr( $type ); ?>_subject]" value="<?php echo esc_attr( $texts[ $type . '_subject' ] ); ?>"></td></tr>
+					<tr><th><label for="m-<?php echo esc_attr( $type ); ?>-h">Kop</label></th><td><input class="large-text" id="m-<?php echo esc_attr( $type ); ?>-h" name="krv_email[<?php echo esc_attr( $type ); ?>_heading]" value="<?php echo esc_attr( $texts[ $type . '_heading' ] ); ?>"></td></tr>
+					<tr><th><label for="m-<?php echo esc_attr( $type ); ?>-i">Bericht</label></th><td><textarea class="large-text" rows="5" id="m-<?php echo esc_attr( $type ); ?>-i" name="krv_email[<?php echo esc_attr( $type ); ?>_intro]"><?php echo esc_textarea( $texts[ $type . '_intro' ] ); ?></textarea></td></tr>
+				</table>
+			<?php endforeach; ?>
+			<h3 style="margin-top:28px">Afsluiting (alle e-mails)</h3>
+			<table class="form-table" role="presentation">
+				<tr><th><label for="m-sig">Groet / ondertekening</label></th><td><textarea class="large-text" rows="3" id="m-sig" name="krv_email[signature]"><?php echo esc_textarea( $texts['signature'] ); ?></textarea></td></tr>
+				<tr><th><label for="m-foot">Voettekst</label></th><td><input class="large-text" id="m-foot" name="krv_email[footer]" value="<?php echo esc_attr( $texts['footer'] ); ?>"></td></tr>
+			</table>
+			<p class="description">Bij het bevestigen of annuleren van een boeking kun je daarnaast een <strong>persoonlijk bericht</strong> voor die ene klant meesturen.</p>
+
 			<?php submit_button( 'Instellingen opslaan' ); ?>
+			<p><a class="button" href="<?php echo esc_url( wp_nonce_url( admin_url( 'admin-post.php?action=krv_email_test' ), 'krv_email_test' ) ); ?>">Stuur testmail naar mij</a>
+				<span class="description">Verstuurt de e-mail "Reservering bevestigd" (met de laatste bestelling als voorbeeld) naar <?php echo esc_html( wp_get_current_user()->user_email ); ?>. Sla eerst je wijzigingen op.</span></p>
 		</form>
 	</div>
 	<?php
 }
+
+/* Voorbeeld van een e-mail in de browser. */
+add_action(
+	'admin_post_krv_email_preview',
+	function () {
+		check_admin_referer( 'krv_email_preview' );
+		if ( ! current_user_can( 'manage_options' ) ) {
+			wp_die( 'Geen toegang.' );
+		}
+		$type = isset( $_GET['type'] ) ? sanitize_key( $_GET['type'] ) : 'received';
+		$type = in_array( $type, array( 'received', 'confirmed', 'cancelled' ), true ) ? $type : 'received';
+		list( $bookings, $request_id ) = krv_email_sample_bookings();
+		$a = krv_customer_email_args( $type, $bookings, $request_id, 'confirmed' === $type ? 'Voorbeeld van een persoonlijk bericht: we bezorgen zaterdag rond 9:00 uur. Veel plezier!' : '' );
+		header( 'Content-Type: text/html; charset=utf-8' );
+		echo '<div style="font:14px sans-serif;background:#002533;color:#fff;padding:10px 16px">Voorbeeld · Onderwerp: <strong>' . esc_html( $a['subject'] ) . '</strong></div>';
+		echo krv_render_email( $a ); // phpcs:ignore WordPress.Security.EscapeOutput
+		exit;
+	}
+);
+
+/* Testmail naar de ingelogde beheerder. */
+add_action(
+	'admin_post_krv_email_test',
+	function () {
+		check_admin_referer( 'krv_email_test' );
+		if ( ! current_user_can( 'manage_options' ) ) {
+			wp_die( 'Geen toegang.' );
+		}
+		list( $bookings, $request_id ) = krv_email_sample_bookings();
+		$a    = krv_customer_email_args( 'confirmed', $bookings, $request_id, 'Dit is een testmail vanuit KR Verhuur.' );
+		$sent = krv_send_email( wp_get_current_user()->user_email, '[Test] ' . $a['subject'], $a );
+		wp_safe_redirect( admin_url( 'edit.php?post_type=kr_booking&page=krv-settings&testmail=' . ( $sent ? 'ok' : 'fail' ) . '#emails' ) );
+		exit;
+	}
+);
