@@ -434,3 +434,13 @@ body.vat-excl .only-excl { display: inline; }
 .cart-edit-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
 .cart-edit-actions .btn { padding: .6em 1.1em; font-size: .92rem; }
 .cal-day.start:hover:not(:disabled), .cal-day.end:hover:not(:disabled) { background: var(--green-dark); color: var(--white); }
+
+/* Grid-kolommen mogen smaller worden dan hun inhoud (anders schuift de pagina op mobiel uit beeld). */
+.detail > *, .cart-layout > *, .footer-grid > * { min-width: 0; }
+@media (max-width: 520px) {
+  .card { padding: 20px; }
+  .cal-grid { gap: 3px; }
+  .cal-day { border-radius: 8px; font-size: .9rem; }
+}
+.summary-row span:only-child { white-space: normal; }
+.option-title > span:last-child { white-space: nowrap; }
