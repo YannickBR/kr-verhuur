@@ -14,11 +14,9 @@ window.KR = window.KR || {};
   const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
   KR.util = Object.assign(KR.util || {}, { euro, esc });
 
-  // Bedragen zijn intern incl. btw; weergave volgens de instelling (incl. of excl. btw).
-  const vatRate = Number(CFG.vat && CFG.vat.rate) || 0;
-  const showExcl = !!Number(CFG.vat && CFG.vat.showExcl);
-  const vatLabel = showExcl ? "excl. btw" : "incl. btw";
-  const show = (incl) => euro(showExcl ? incl / (1 + vatRate / 100) : incl);
+  // Bedragen zijn intern incl. btw; KR.vat (cart.js) toont ze incl. of excl. btw, naar keuze van de bezoeker.
+  const show = (incl) => KR.vat.show(incl);
+  const priceSpan = (incl) => '<span data-price-incl="' + incl + '">' + show(incl) + "</span>";
 
   KR.pricing = {
     calculate(p, sel) {
@@ -66,7 +64,7 @@ window.KR = window.KR || {};
         const x = p.extras[k];
         return (
           '<label class="option"><input type="checkbox" name="extra" value="' + esc(k) + '">' +
-          '<span class="option-body"><span class="option-title"><span>' + esc(x.label) + "</span><span>+ " + show(Number(x.price)) +
+          '<span class="option-body"><span class="option-title"><span>' + esc(x.label) + "</span><span>+ " + priceSpan(Number(x.price)) +
           (x.type === "perDay" ? " p/d" : "") + '</span></span><span class="option-desc">' + esc(x.description || "") + "</span></span></label>"
         );
       })
@@ -103,8 +101,8 @@ window.KR = window.KR || {};
       const price = KR.pricing.calculate(p, state);
       summary.innerHTML =
         price.lines.map((l) => '<div class="summary-row"><span>' + esc(l.label) + "</span><span>" + show(l.amount) + "</span></div>").join("") +
-        '<div class="summary-row summary-total"><span>Subtotaal <small>' + vatLabel + "</small></span><span>" + show(price.total) + "</span></div>" +
-        '<div class="summary-note">' + (price.deposit ? "Excl. borg van " + euro(price.deposit) + ". " : "") + "Prijzen " + vatLabel + ".</div>";
+        '<div class="summary-row summary-total"><span>Subtotaal <small>' + KR.vat.label() + "</small></span><span>" + show(price.total) + "</span></div>" +
+        '<div class="summary-note">' + (price.deposit ? "Excl. borg van " + euro(price.deposit) + ". " : "") + "Prijzen " + KR.vat.label() + ".</div>";
     }
 
     function buildCalendar() {
@@ -135,6 +133,9 @@ window.KR = window.KR || {};
     }
 
     loadAvailability().then(buildCalendar);
+
+    // Bezoeker wisselt incl./excl. btw: samenvatting opnieuw tonen (extra opties doet KR.vat.apply zelf).
+    document.addEventListener("krv:vat", update);
 
     // Winkelwagen gewijzigd (bijv. in een ander tabblad): beschikbaarheid bijwerken.
     document.addEventListener("krv:cart", () => {

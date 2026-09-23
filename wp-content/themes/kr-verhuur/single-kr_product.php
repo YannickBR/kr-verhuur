@@ -41,10 +41,10 @@ while ( have_posts() ) :
 						<?php endif; ?>
 					</div>
 					<div class="card card-spaced">
-						<h3>Tarieven <small class="vat-note">(<?php echo esc_html( krt_vat_label() ); ?>)</small></h3>
+						<h3>Tarieven <small class="vat-note">(<?php echo krt_vat_label(); // phpcs:ignore ?>)</small></h3>
 						<table class="price-table">
-							<tr><td>Eerste dag</td><td><?php echo esc_html( krt_price( $p['price_day'] ) ); ?></td></tr>
-							<tr><td>Elke extra dag</td><td><?php echo esc_html( krt_price( $p['price_extra_day'] ) ); ?></td></tr>
+							<tr><td>Eerste dag</td><td><?php echo krt_price( $p['price_day'] ); // phpcs:ignore ?></td></tr>
+							<tr><td>Elke extra dag</td><td><?php echo krt_price( $p['price_extra_day'] ); // phpcs:ignore ?></td></tr>
 							<?php if ( $p['deposit'] > 0 ) : ?><tr><td>Borg</td><td><?php echo esc_html( krt_euro( $p['deposit'] ) ); ?></td></tr><?php endif; ?>
 							<tr><td>Maximale huurperiode</td><td><?php echo (int) $p['max_days']; ?> dagen</td></tr>
 						</table>

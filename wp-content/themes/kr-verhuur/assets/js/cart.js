@@ -87,3 +87,61 @@ window.KR = window.KR || {};
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", updateBadges);
   else updateBadges();
 })();
+
+/*
+ * Btw-weergave: incl. of excl. btw, te wisselen door de bezoeker.
+ *
+ * Bedragen staan in de pagina als <span class="js-price" data-price-incl="…">.
+ * De keuze wordt in een cookie bewaard, zodat ook de server (en de e-mails)
+ * hem kennen. Andere scripts luisteren naar het event "krv:vat".
+ */
+(function () {
+  const CFG = window.KRV_VAT || { rate: 21, mode: "incl", toggle: 0, cookie: "krv_vat" };
+  const rate = Number(CFG.rate) || 0;
+  const euro = (n) => new Intl.NumberFormat("nl-NL", { style: "currency", currency: "EUR" }).format(n);
+  let mode = CFG.mode === "excl" ? "excl" : "incl";
+
+  // Een eerder gemaakte keuze (bijv. bij een pagina uit de cache) gaat voor.
+  if (Number(CFG.toggle)) {
+    const m = document.cookie.match(new RegExp("(?:^|; )" + CFG.cookie + "=(incl|excl)"));
+    if (m) mode = m[1];
+  }
+
+  const toExcl = (incl) => Math.round((Number(incl) / (1 + rate / 100)) * 100) / 100;
+
+  KR.vat = {
+    rate,
+    mode: () => mode,
+    isExcl: () => mode === "excl",
+    label: () => (mode === "excl" ? "excl. btw" : "incl. btw"),
+    toExcl,
+    // Bedrag incl. btw → tekst zoals de bezoeker het wil zien.
+    show: (incl) => euro(mode === "excl" ? toExcl(incl) : Number(incl)),
+    set(next) {
+      if (next !== "incl" && next !== "excl") return;
+      mode = next;
+      document.cookie = CFG.cookie + "=" + next + "; path=/; max-age=31536000; SameSite=Lax";
+      KR.vat.apply();
+      document.dispatchEvent(new CustomEvent("krv:vat", { detail: { mode } }));
+    },
+    // Alle bedragen en labels op de pagina bijwerken.
+    apply(root) {
+      const scope = root || document;
+      scope.querySelectorAll("[data-price-incl]").forEach((el) => {
+        el.textContent = KR.vat.show(el.getAttribute("data-price-incl"));
+      });
+      scope.querySelectorAll(".js-vat-label").forEach((el) => (el.textContent = KR.vat.label()));
+      document.querySelectorAll("[data-vat-set]").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.vatSet === mode)));
+      document.body.classList.toggle("vat-excl", mode === "excl");
+      document.body.classList.toggle("vat-incl", mode !== "excl");
+    },
+  };
+
+  document.addEventListener("click", (e) => {
+    const b = e.target.closest("[data-vat-set]");
+    if (b) KR.vat.set(b.dataset.vatSet);
+  });
+
+  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", () => KR.vat.apply());
+  else KR.vat.apply();
+})();

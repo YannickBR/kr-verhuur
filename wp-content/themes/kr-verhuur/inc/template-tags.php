@@ -82,17 +82,34 @@ function krt_euro( $n ) {
 	return function_exists( 'krv_euro' ) ? krv_euro( $n ) : '€ ' . number_format_i18n( (float) $n, 2 );
 }
 
-/** Ingevoerde prijs (artikel of extra optie) → bedrag zoals de website het toont (incl. of excl. btw). */
+/**
+ * Ingevoerde prijs (artikel of extra optie) als HTML, zoals de website hem toont (incl. of excl. btw).
+ * Het bedrag incl. btw staat in data-price-incl, zodat de wisselknop het zonder herladen kan omrekenen.
+ */
 function krt_price( $entered ) {
-	if ( function_exists( 'krv_display_amount' ) ) {
-		return krt_euro( krv_display_amount( krv_entered_to_incl( $entered ) ) );
+	if ( ! function_exists( 'krv_display_amount' ) ) {
+		return esc_html( krt_euro( $entered ) );
 	}
-	return krt_euro( $entered );
+	$incl = round( krv_entered_to_incl( $entered ), 2 );
+	return '<span class="js-price" data-price-incl="' . esc_attr( $incl ) . '">' . esc_html( krt_euro( krv_display_amount( $incl ) ) ) . '</span>';
 }
 
-/** "incl. btw" of "excl. btw", volgens de instelling. */
+/** "incl. btw" of "excl. btw" als HTML (wordt bijgewerkt door de wisselknop). */
 function krt_vat_label() {
-	return function_exists( 'krv_vat_label' ) ? krv_vat_label() : 'incl. btw';
+	$label = function_exists( 'krv_vat_label' ) ? krv_vat_label() : 'incl. btw';
+	return '<span class="js-vat-label">' . esc_html( $label ) . '</span>';
+}
+
+/** Wisselknop incl./excl. btw (alleen als die in de instellingen aan staat). */
+function krt_vat_toggle( $class = '' ) {
+	if ( ! function_exists( 'krv_vat_toggle_enabled' ) || ! krv_vat_toggle_enabled() ) {
+		return '';
+	}
+	$excl = krv_show_excl_vat();
+	return '<div class="vat-toggle ' . esc_attr( $class ) . '" role="group" aria-label="Prijzen tonen">' .
+		'<button type="button" data-vat-set="incl" aria-pressed="' . ( $excl ? 'false' : 'true' ) . '">Incl. btw</button>' .
+		'<button type="button" data-vat-set="excl" aria-pressed="' . ( $excl ? 'true' : 'false' ) . '">Excl. btw</button>' .
+		'</div>';
 }
 
 function krt_is_external( $url ) {
@@ -117,7 +134,7 @@ function krt_group_card( $term ) {
 			<?php if ( $ext ) : ?>
 				Bekijk op <?php echo esc_html( ucfirst( strtok( $host, '.' ) ) ); ?> <?php echo krt_icon( 'external' ); // phpcs:ignore ?>
 			<?php else : ?>
-				<?php echo $from ? 'Vanaf ' . esc_html( krt_price( $from ) ) . ' p/d' : 'Bekijken'; ?> <?php echo krt_icon( 'arrow' ); // phpcs:ignore ?>
+				<?php echo $from ? 'Vanaf ' . krt_price( $from ) . ' p/d' : 'Bekijken'; ?> <?php echo krt_icon( 'arrow' ); // phpcs:ignore ?>
 			<?php endif; ?>
 		</span>
 	</a>
@@ -150,7 +167,7 @@ function krt_product_card( $post_id ) {
 			<h3><?php echo esc_html( $p['name'] ); ?></h3>
 			<p><?php echo esc_html( wp_trim_words( get_the_excerpt( $post_id ), 24 ) ); ?></p>
 			<div class="product-foot">
-				<span class="price"><?php echo esc_html( krt_price( $p['price_day'] ) ); ?> <small>/ dag<?php echo function_exists( 'krv_show_excl_vat' ) && krv_show_excl_vat() ? ' excl. btw' : ''; ?></small></span>
+				<span class="price"><?php echo krt_price( $p['price_day'] ); // phpcs:ignore ?> <small>/ dag <span class="only-excl">excl. btw</span></small></span>
 				<span class="btn btn-outline">Bekijken</span>
 			</div>
 		</div>

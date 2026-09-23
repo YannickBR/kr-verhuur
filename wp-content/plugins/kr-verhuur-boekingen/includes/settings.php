@@ -18,7 +18,8 @@ function krv_default_settings() {
 		'blocking_status' => array( 'pending', 'confirmed' ),
 		'vat_rate'        => 21,
 		'prices_incl_vat' => 1,      // Ingevoerde prijzen (artikelen, extra opties) zijn incl. btw.
-		'display_vat'     => 'incl', // Website toont prijzen 'incl' of 'excl' btw.
+		'display_vat'     => 'incl', // Standaardweergave op de website: 'incl' of 'excl' btw.
+		'vat_toggle'      => 1,      // Bezoeker mag zelf wisselen tussen incl. en excl. btw.
 	);
 }
 
@@ -84,9 +85,36 @@ function krv_vat_rate() {
 	return max( 0, (float) krv_setting( 'vat_rate' ) );
 }
 
-/** Toont de website prijzen exclusief btw? */
+/** Naam van de cookie waarin de keuze van de bezoeker (incl/excl) staat. */
+define( 'KRV_VAT_COOKIE', 'krv_vat' );
+
+/** Standaardweergave volgens de instellingen: 'incl' of 'excl'. */
+function krv_vat_default_mode() {
+	return 'excl' === krv_setting( 'display_vat' ) ? 'excl' : 'incl';
+}
+
+/** Mag de bezoeker zelf wisselen? */
+function krv_vat_toggle_enabled() {
+	return (bool) krv_setting( 'vat_toggle' );
+}
+
+/**
+ * Huidige weergave: de keuze van de bezoeker (cookie) als wisselen is toegestaan,
+ * anders de standaard. In wp-admin geldt altijd de standaard.
+ */
+function krv_vat_mode() {
+	if ( krv_vat_toggle_enabled() && ! is_admin() && isset( $_COOKIE[ KRV_VAT_COOKIE ] ) ) {
+		$c = sanitize_key( wp_unslash( $_COOKIE[ KRV_VAT_COOKIE ] ) );
+		if ( in_array( $c, array( 'incl', 'excl' ), true ) ) {
+			return $c;
+		}
+	}
+	return krv_vat_default_mode();
+}
+
+/** Worden prijzen nu exclusief btw getoond? */
 function krv_show_excl_vat() {
-	return 'excl' === krv_setting( 'display_vat' );
+	return 'excl' === krv_vat_mode();
 }
 
 /** Ingevoerde prijs → bedrag incl. btw. */

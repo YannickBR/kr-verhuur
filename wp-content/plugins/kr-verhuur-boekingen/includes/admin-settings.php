@@ -35,6 +35,7 @@ add_action(
 		$settings['vat_rate']        = max( 0, min( 100, (float) str_replace( ',', '.', $in['vat_rate'] ?? 21 ) ) );
 		$settings['prices_incl_vat'] = ( $in['prices_incl_vat'] ?? '1' ) === '1' ? 1 : 0;
 		$settings['display_vat']     = 'excl' === ( $in['display_vat'] ?? 'incl' ) ? 'excl' : 'incl';
+		$settings['vat_toggle']      = empty( $in['vat_toggle'] ) ? 0 : 1;
 		if ( ! $settings['blocking_status'] ) {
 			$settings['blocking_status'] = array( 'confirmed' );
 		}
@@ -110,10 +111,13 @@ function krv_settings_page() {
 
 			<h2>Btw</h2>
 			<table class="form-table" role="presentation">
-				<tr><th>Prijzen op de website tonen</th><td>
+				<tr><th>Prijzen standaard tonen</th><td>
 					<label><input type="radio" name="krv[display_vat]" value="incl" <?php checked( 'incl', $s['display_vat'] ); ?>> Inclusief btw</label><br>
 					<label><input type="radio" name="krv[display_vat]" value="excl" <?php checked( 'excl', $s['display_vat'] ); ?>> Exclusief btw</label>
-					<p class="description">Geldt voor de hele website: artikelen, extra opties, winkelwagen en e-mails. Bij exclusief wordt in de winkelwagen de btw en het totaal inclusief btw apart getoond.</p></td></tr>
+					<p class="description">Hoe nieuwe bezoekers de prijzen zien: artikelen, extra opties, winkelwagen en e-mails. Bij exclusief toont de winkelwagen ook de btw en het totaal inclusief btw.</p></td></tr>
+				<tr><th>Wisselknop voor bezoekers</th><td>
+					<label><input type="checkbox" name="krv[vat_toggle]" value="1" <?php checked( ! empty( $s['vat_toggle'] ) ); ?>> Bezoekers kunnen zelf wisselen tussen incl. en excl. btw</label>
+					<p class="description">Toont een schakelaar "Incl. btw / Excl. btw" in de header en de winkelwagen. De keuze wordt onthouden.</p></td></tr>
 				<tr><th>Ingevoerde prijzen zijn</th><td>
 					<label><input type="radio" name="krv[prices_incl_vat]" value="1" <?php checked( 1, (int) $s['prices_incl_vat'] ); ?>> Inclusief btw</label><br>
 					<label><input type="radio" name="krv[prices_incl_vat]" value="0" <?php checked( 0, (int) $s['prices_incl_vat'] ); ?>> Exclusief btw</label>

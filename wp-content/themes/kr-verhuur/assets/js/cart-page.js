@@ -11,11 +11,11 @@
   const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
   const D = KR.dates;
 
-  // Bedragen van de server zijn incl. btw; weergave volgens de instelling.
-  const vatRate = Number(CFG.vat && CFG.vat.rate) || 0;
-  const showExcl = !!Number(CFG.vat && CFG.vat.showExcl);
-  const toExcl = (incl) => Math.round((incl / (1 + vatRate / 100)) * 100) / 100;
-  const show = (incl) => euro(showExcl ? toExcl(incl) : incl);
+  // Bedragen van de server zijn incl. btw; KR.vat (cart.js) toont ze naar keuze van de bezoeker.
+  const vatRate = KR.vat.rate;
+  const toExcl = KR.vat.toExcl;
+  const show = (incl) => KR.vat.show(incl);
+
   const icons = CFG.icons || {};
 
   let checks = []; // resultaat van /cart/validate, zelfde volgorde als de winkelwagen
@@ -54,7 +54,7 @@
     const excl = toExcl(incl);
     const vat = Math.round((incl - excl) * 100) / 100;
     const row = (a, b, cls) => '<div class="summary-row' + (cls ? " " + cls : "") + '"><span>' + a + "</span><span>" + b + "</span></div>";
-    if (showExcl) {
+    if (KR.vat.isExcl()) {
       return row("Subtotaal excl. btw", euro(excl)) + row("Btw " + vatRate + "%", euro(vat)) + row("Totaal incl. btw", euro(incl), "summary-total");
     }
     return row("Totaal incl. btw", euro(incl), "summary-total") + row("Waarvan btw " + vatRate + "%", euro(vat), "summary-vat");
@@ -130,13 +130,14 @@
       '<div class="field full"><label for="c-notes">Opmerkingen</label><textarea id="c-notes" name="notes" placeholder="Bijv. gewenste tijden of bijzonderheden">' + v("notes") + "</textarea></div>" +
       '<div class="hp" aria-hidden="true"><label>Website <input name="website" tabindex="-1" autocomplete="off"></label></div>' +
       "</div>" +
-      '<div class="summary">' + totalsHtml(total) +
+      '<div class="summary">' + (CFG.vatToggle || "") + totalsHtml(total) +
       '<div class="summary-note">' + (deposit ? "Excl. borg van " + euro(deposit) + ". " : "") + "Je ontvangt een bevestiging per e-mail; wij bevestigen de beschikbaarheid zo snel mogelijk.</div></div>" +
       '<button class="btn btn-primary btn-block" id="checkout-btn" type="submit"' + (problems || checking || busy ? " disabled" : "") + ">" +
       (busy ? "Bezig met versturen…" : "Bestelling plaatsen") + "</button>" +
       (problems ? '<p class="cart-error">Los eerst de melding' + (problems > 1 ? "en" : "") + " bij je artikelen op.</p>" : "") +
       '<div id="checkout-msg" aria-live="polite"></div>' +
       "</form></aside></div>";
+    KR.vat.apply(root);
   }
 
   root.addEventListener("click", (e) => {
@@ -191,6 +192,10 @@
       const msg = root.querySelector("#checkout-msg");
       if (msg) msg.innerHTML = '<div class="alert alert-error">' + esc(err.message) + "</div>";
     }
+  });
+
+  document.addEventListener("krv:vat", () => {
+    if (!busy) render();
   });
 
   document.addEventListener("krv:cart", () => {

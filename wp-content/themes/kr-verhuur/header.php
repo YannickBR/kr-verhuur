@@ -14,6 +14,7 @@
 		<a class="brand" href="<?php echo esc_url( home_url( '/' ) ); ?>" aria-label="<?php echo esc_attr( get_bloginfo( 'name' ) ); ?> – home">
 			<?php echo krt_logo( 'light' ); // phpcs:ignore ?>
 		</a>
+		<?php echo krt_vat_toggle( 'vat-toggle-header' ); // phpcs:ignore ?>
 		<a class="cart-link" href="<?php echo esc_url( krt_cart_url() ); ?>" aria-label="Winkelwagen">
 			<?php echo krt_icon( 'cart' ); // phpcs:ignore ?>
 			<span class="cart-count" data-cart-count hidden>0</span>
@@ -33,6 +34,7 @@
 			);
 			?>
 			<a class="btn btn-primary" href="<?php echo esc_url( krt_catalog_url() ); ?>"><?php echo krt_icon( 'calendar' ); // phpcs:ignore ?>Direct reserveren</a>
+			<?php echo krt_vat_toggle( 'vat-toggle-menu' ); // phpcs:ignore ?>
 		</nav>
 	</div>
 </header>

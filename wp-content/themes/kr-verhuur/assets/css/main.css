@@ -84,7 +84,7 @@ p { margin: 0 0 1em; }
 .nav-toggle .i-close, .nav-toggle.is-open .i-open { display: none; }
 .nav-toggle.is-open .i-close { display: block; }
 
-@media (max-width: 860px) {
+@media (max-width: 1024px) {
   .nav-toggle { display: block; }
   .nav {
     position: absolute; top: 76px; left: 0; right: 0; flex-direction: column; align-items: stretch;
@@ -351,7 +351,7 @@ p { margin: 0 0 1em; }
 }
 .cart-count[hidden] { display: none; }
 .nav-toggle { order: 4; }
-@media (max-width: 860px) {
+@media (max-width: 1024px) {
   .cart-link { margin-left: auto; }
   .nav-toggle { margin-left: 4px; }
 }
@@ -396,3 +396,34 @@ p { margin: 0 0 1em; }
 .vat-note { font-size: .8rem; font-weight: 700; color: var(--muted); }
 .summary-total small { font-size: .75rem; font-weight: 700; color: var(--muted); }
 .summary-vat { font-size: .85rem; color: var(--muted); }
+
+/* ---------- Btw-wisselknop ---------- */
+.vat-toggle { display: inline-flex; padding: 3px; border-radius: 999px; background: rgba(223, 241, 251, .1); flex: none; }
+.vat-toggle button {
+  border: 0; background: transparent; color: var(--sky); font: inherit; font-size: .78rem; font-weight: 800;
+  padding: .45em .8em; border-radius: 999px; cursor: pointer; white-space: nowrap; opacity: .75;
+}
+.vat-toggle button:hover { opacity: 1; }
+.vat-toggle button[aria-pressed="true"] { background: var(--sky); color: var(--navy); opacity: 1; }
+.vat-toggle button:focus-visible { outline: 2px solid var(--green); outline-offset: 1px; }
+.vat-toggle-header { order: 3; }
+.site-header .cart-link { order: 4; }
+.site-header .nav-toggle { order: 5; }
+.vat-toggle-menu { display: none; }
+.vat-toggle-cart { background: var(--white); border: 1px solid var(--line); margin-bottom: 12px; }
+.vat-toggle-cart button { color: var(--navy); }
+.vat-toggle-cart button[aria-pressed="true"] { background: var(--navy); color: var(--white); }
+@media (max-width: 1024px) {
+  .vat-toggle-header { display: none; }
+  .vat-toggle-menu { display: inline-flex; align-self: flex-start; margin-top: 10px; }
+}
+.only-excl { display: none; }
+body.vat-excl .only-excl { display: inline; }
+.nav a { white-space: nowrap; }
+@media (min-width: 1025px) and (max-width: 1360px) {
+  .nav > .btn { display: none; }
+  .nav a { padding: .5em .7em; }
+}
+.brand { flex: none; }
+.brand svg { width: 207px; height: 46px; }
+@media (max-width: 420px) { .brand svg { width: 171px; height: 38px; } }
