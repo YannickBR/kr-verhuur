@@ -3,10 +3,8 @@
  * REST API voor de website.
  *
  *   GET  /wp-json/kr/v1/availability/<product_id>  → { "2026-10-03": 0, ... } (resterende voorraad)
- *   POST /wp-json/kr/v1/bookings                   → aanvraag met één of meer regels (items)
- *
- * De POST accepteert al een lijst met items, zodat een toekomstige winkelwagen
- * dezelfde endpoint kan gebruiken.
+ *   POST /wp-json/kr/v1/cart/validate              → controleer winkelwagenregels (prijs + beschikbaarheid)
+ *   POST /wp-json/kr/v1/bookings                   → bestelling plaatsen: alle regels uit de winkelwagen in één keer
  */
 
 defined( 'ABSPATH' ) || exit;
@@ -29,6 +27,16 @@ function krv_register_rest() {
 				$res->header( 'Cache-Control', 'no-store' );
 				return $res;
 			},
+		)
+	);
+
+	register_rest_route(
+		'kr/v1',
+		'/cart/validate',
+		array(
+			'methods'             => 'POST',
+			'permission_callback' => '__return_true',
+			'callback'            => 'krv_rest_validate_cart',
 		)
 	);
 
@@ -69,11 +77,16 @@ function krv_rest_create_booking( WP_REST_Request $r ) {
 
 	// Eerst alles valideren, dan pas opslaan (alles of niets).
 	$valid = array();
-	foreach ( $items as $item ) {
-		$v = krv_validate_booking( array_merge( (array) $item, $customer ) );
+	foreach ( $items as $i => $item ) {
+		$v = krv_validate_booking( array_merge( (array) $item, $customer ), array( 'pending' => $valid ) );
 		if ( is_wp_error( $v ) ) {
-			$v->add_data( array( 'status' => 422 ) );
-			return $v;
+			$name   = krv_item_name( $item );
+			$prefix = ( 'krv_customer' === $v->get_error_code() || ! $name || false !== strpos( $v->get_error_message(), $name ) ) ? '' : $name . ': ';
+			return new WP_Error(
+				$v->get_error_code(),
+				$prefix . $v->get_error_message(),
+				array( 'status' => 422, 'item' => $i )
+			);
 		}
 		$valid[] = $v;
 	}
@@ -91,11 +104,48 @@ function krv_rest_create_booking( WP_REST_Request $r ) {
 		$ids[] = $id;
 	}
 
+	do_action( 'krv_request_created', $request_id, $ids );
 	set_transient( $ip_key, $count + 1, HOUR_IN_SECONDS );
 
 	return array(
 		'ok'        => true,
 		'reference' => $request_id,
+		'total'     => round( array_sum( wp_list_pluck( $valid, 'total' ) ), 2 ),
 		'bookings'  => array_map( 'krv_booking_ref', $ids ),
 	);
+}
+
+function krv_item_name( $item ) {
+	$id = is_array( $item ) && isset( $item['product_id'] ) ? (int) $item['product_id'] : 0;
+	return $id && 'kr_product' === get_post_type( $id ) ? get_the_title( $id ) : '';
+}
+
+/**
+ * Winkelwagen controleren zonder op te slaan: actuele prijs en beschikbaarheid per regel.
+ * Regels worden in volgorde gecontroleerd, zodat ook onderlinge overlap in de winkelwagen telt.
+ */
+function krv_rest_validate_cart( WP_REST_Request $r ) {
+	$body  = $r->get_json_params();
+	$items = isset( $body['items'] ) && is_array( $body['items'] ) ? array_slice( $body['items'], 0, 20 ) : array();
+	$out   = array();
+	$valid = array();
+	foreach ( $items as $item ) {
+		$v = krv_validate_booking( (array) $item, array( 'pending' => $valid, 'skip_customer' => true ) );
+		if ( is_wp_error( $v ) ) {
+			$out[] = array( 'ok' => false, 'error' => $v->get_error_message() );
+			continue;
+		}
+		$valid[] = $v;
+		$out[]   = array(
+			'ok'       => true,
+			'days'     => $v['days'],
+			'quantity' => $v['quantity'],
+			'lines'    => $v['lines'],
+			'total'    => $v['total'],
+			'deposit'  => $v['deposit'],
+		);
+	}
+	$res = rest_ensure_response( array( 'items' => $out ) );
+	$res->header( 'Cache-Control', 'no-store' );
+	return $res;
 }

@@ -5,26 +5,21 @@
 
 defined( 'ABSPATH' ) || exit;
 
-/** Tekstuele samenvatting van een boeking. */
-function krv_booking_summary_text( $b ) {
-	$extras = krv_extras();
-	$out    = array(
-		'Referentie: ' . krv_booking_ref( $b['id'] ),
-		'Artikel: ' . $b['product_name'] . ( $b['quantity'] > 1 ? ' (' . $b['quantity'] . '×)' : '' ),
+/** Tekstuele samenvatting van één boekingsregel (zonder klantgegevens). */
+function krv_booking_item_text( $b ) {
+	$out = array(
+		$b['product_name'] . ( $b['quantity'] > 1 ? ' (' . $b['quantity'] . '×)' : '' ) . ' – ' . krv_booking_ref( $b['id'] ),
 		'Periode: ' . krv_pretty_period( $b['start'], $b['end'] ),
-		'',
 	);
 	foreach ( (array) $b['lines'] as $l ) {
 		$out[] = '  ' . $l['label'] . ': ' . krv_euro( $l['amount'] );
 	}
-	$out[] = 'Totaal: ' . krv_euro( $b['total'] ) . ' (incl. btw)';
-	if ( $b['deposit'] > 0 ) {
-		$out[] = 'Borg: ' . krv_euro( $b['deposit'] );
-	}
-	$out[] = '';
-	$out[] = 'Naam: ' . $b['name'];
-	$out[] = 'E-mail: ' . $b['email'];
-	$out[] = 'Telefoon: ' . $b['phone'];
+	$out[] = 'Subtotaal: ' . krv_euro( $b['total'] ) . ( $b['deposit'] > 0 ? ' (borg ' . krv_euro( $b['deposit'] ) . ')' : '' );
+	return implode( "\n", $out );
+}
+
+function krv_customer_text( $b ) {
+	$out = array( 'Naam: ' . $b['name'], 'E-mail: ' . $b['email'], 'Telefoon: ' . $b['phone'] );
 	if ( $b['address'] ) {
 		$out[] = 'Adres: ' . $b['address'];
 	}
@@ -34,40 +29,66 @@ function krv_booking_summary_text( $b ) {
 	return implode( "\n", $out );
 }
 
+/** Samenvatting van meerdere boekingen (één bestelling). */
+function krv_order_summary_text( $bookings ) {
+	$parts   = array();
+	$total   = 0;
+	$deposit = 0;
+	foreach ( $bookings as $b ) {
+		$parts[]  = krv_booking_item_text( $b );
+		$total   += (float) $b['total'];
+		$deposit += (float) $b['deposit'];
+	}
+	$txt = implode( "\n\n", $parts ) . "\n\n" . 'Totaal: ' . krv_euro( $total ) . ' (incl. btw)';
+	if ( $deposit > 0 ) {
+		$txt .= "\nBorg totaal: " . krv_euro( $deposit );
+	}
+	return $txt . "\n\n" . krv_customer_text( $bookings[0] );
+}
+
+/** Tekstuele samenvatting van één boeking (voor statusmails). */
+function krv_booking_summary_text( $b ) {
+	return krv_order_summary_text( array( $b ) );
+}
+
 function krv_mail_headers() {
 	$from = krv_setting( 'email' );
 	return array( 'Reply-To: ' . krv_setting( 'company_name' ) . ' <' . $from . '>' );
 }
 
-/* Nieuwe aanvraag vanaf de website → beheerder + klant. */
+/* Nieuwe bestelling vanaf de website → één mail naar de beheerder en één naar de klant. */
 add_action(
-	'krv_booking_created',
-	function ( $id ) {
-		$b = krv_get_booking( $id );
-		if ( ! $b || 'website' !== $b['source'] ) {
+	'krv_request_created',
+	function ( $request_id, $ids ) {
+		$bookings = array_values( array_filter( array_map( 'krv_get_booking', (array) $ids ) ) );
+		if ( ! $bookings ) {
 			return;
 		}
+		$first   = $bookings[0];
 		$company = krv_setting( 'company_name' );
-		$summary = krv_booking_summary_text( $b );
+		$summary = 'Bestelnummer: ' . $request_id . "\n\n" . krv_order_summary_text( $bookings );
+		$names   = implode( ', ', wp_list_pluck( $bookings, 'product_name' ) );
 
 		wp_mail(
 			krv_setting( 'notify_email' ),
-			'Nieuwe reserveringsaanvraag ' . krv_booking_ref( $id ) . ' – ' . $b['product_name'],
-			"Er is een nieuwe reserveringsaanvraag binnengekomen.\n\n" . $summary .
-			"\n\nBekijk en bevestig de boeking:\n" . admin_url( 'post.php?action=edit&post=' . $id ),
-			array( 'Reply-To: ' . $b['name'] . ' <' . $b['email'] . '>' )
+			'Nieuwe bestelling ' . $request_id . ' – ' . $names,
+			'Er is een nieuwe bestelling binnengekomen (' . count( $bookings ) . ( 1 === count( $bookings ) ? ' artikel' : ' artikelen' ) . ").\n\n" . $summary .
+			"\n\nBekijk en bevestig de boekingen:\n" . admin_url( 'edit.php?post_type=kr_booking&s=' . rawurlencode( $request_id ) ),
+			array( 'Reply-To: ' . $first['name'] . ' <' . $first['email'] . '>' )
 		);
 
-		if ( is_email( $b['email'] ) ) {
+		if ( is_email( $first['email'] ) ) {
 			wp_mail(
-				$b['email'],
-				'We hebben je aanvraag ontvangen – ' . $company,
-				'Beste ' . $b['name'] . ",\n\nBedankt voor je reserveringsaanvraag! We controleren de beschikbaarheid en sturen je zo snel mogelijk een bevestiging.\n\n" .
+				$first['email'],
+				'We hebben je bestelling ontvangen – ' . $company,
+				'Beste ' . $first['name'] . ",\n\nBedankt voor je bestelling! We controleren de beschikbaarheid en sturen je zo snel mogelijk een bevestiging.\n\n" .
 				$summary . "\n\nMet vriendelijke groet,\n" . $company . "\n" . krv_setting( 'phone' ),
 				krv_mail_headers()
 			);
 		}
-	}
+	},
+	10,
+	2
 );
 
 /** Mail aan klant bij bevestigen of annuleren (alleen als de beheerder dat aanvinkt). */

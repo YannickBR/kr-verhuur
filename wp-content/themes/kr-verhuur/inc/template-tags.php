@@ -19,6 +19,7 @@ function krt_icon( $name, $class = '' ) {
 		'tool'         => '<path d="M14.7 6.3a4 4 0 0 0 5 5L21 13l-8 8-3-3 8-8-1.3-1.3a4 4 0 0 1-5-5L13 3z"/><path d="M3 21l6-6"/>',
 		'tent'         => '<path d="M12 3L2 21h20z"/><path d="M12 3v18M9 21l3-6 3 6"/>',
 		'music'        => '<path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/>',
+		'cart'         => '<circle cx="9" cy="20" r="1.5"/><circle cx="18" cy="20" r="1.5"/><path d="M2 3h3l2.7 12.1a2 2 0 0 0 2 1.6h7.9a2 2 0 0 0 2-1.5L21 8H6"/>',
 		'calendar'     => '<rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/>',
 		'check'        => '<path d="M4 12l5 5L20 6"/>',
 		'phone'        => '<path d="M5 3h4l2 5-3 2a11 11 0 0 0 6 6l2-3 5 2v4a2 2 0 0 1-2 2A18 18 0 0 1 3 5a2 2 0 0 1 2-2z"/>',
@@ -38,7 +39,7 @@ function krt_icon( $name, $class = '' ) {
 /** Alle iconen als JSON voor de reserverings-JS. */
 function krt_icons_for_js() {
 	$out = array();
-	foreach ( array( 'chevronLeft', 'chevronRight', 'calendar' ) as $n ) {
+	foreach ( array( 'chevronLeft', 'chevronRight', 'calendar', 'cart', 'check' ) as $n ) {
 		$out[ $n ] = krt_icon( $n );
 	}
 	return $out;
@@ -137,7 +138,7 @@ function krt_product_card( $post_id ) {
 			<p><?php echo esc_html( wp_trim_words( get_the_excerpt( $post_id ), 24 ) ); ?></p>
 			<div class="product-foot">
 				<span class="price"><?php echo esc_html( krt_euro( $p['price_day'] ) ); ?> <small>/ dag</small></span>
-				<span class="btn btn-outline">Reserveren</span>
+				<span class="btn btn-outline">Bekijken</span>
 			</div>
 		</div>
 	</a>

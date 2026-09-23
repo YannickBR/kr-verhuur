@@ -2,7 +2,7 @@
 /**
  * Plugin Name:       KR Verhuur – Boekingen
  * Description:       Huurartikelen, huurgroepen, reserveringskalender en boekingsbeheer voor KR Verhuur.
- * Version:           1.0.0
+ * Version:           1.1.0
  * Requires at least: 6.2
  * Requires PHP:      7.4
  * Author:            KR Verhuur
@@ -11,7 +11,7 @@
 
 defined( 'ABSPATH' ) || exit;
 
-define( 'KRV_VERSION', '1.0.0' );
+define( 'KRV_VERSION', '1.1.0' );
 define( 'KRV_FILE', __FILE__ );
 define( 'KRV_DIR', plugin_dir_path( __FILE__ ) );
 define( 'KRV_URL', plugin_dir_url( __FILE__ ) );

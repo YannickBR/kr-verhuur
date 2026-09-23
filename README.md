@@ -38,21 +38,20 @@ Tip: installeer een SMTP-plugin (bijv. WP Mail SMTP) zodat bevestigingsmails bet
 
 **Boekingen → Instellingen** – contactgegevens, hoeveel dagen vooruit geboekt kan worden, welke statussen de agenda blokkeren, en de extra opties (halen en brengen, schoonmaakkosten, opbouwen, …) met prijs per boeking of per dag.
 
-## Hoe reserveren werkt
+## Hoe reserveren werkt (winkelwagen)
 
-1. De klant kiest op de productpagina één dag (één klik) of een periode (twee klikken). Volgeboekte dagen zijn doorgestreept; bij artikelen met voorraad telt het gekozen aantal mee.
-2. De klant kiest extra opties en ziet direct de totaalprijs. Bij "Halen en brengen" wordt een afleveradres gevraagd.
-3. De aanvraag komt binnen als boeking met status **Aanvraag**. De beheerder krijgt een e-mail en de klant een ontvangstbevestiging. Aanvragen blokkeren de agenda direct, zodat er niet dubbel geboekt wordt.
-4. De beheerder bevestigt de boeking in wp-admin (eventueel met een e-mail naar de klant).
+1. De klant kiest op de productpagina één dag (één klik) of een periode (twee klikken). Volgeboekte dagen zijn doorgestreept; bij artikelen met voorraad telt het gekozen aantal mee, inclusief wat al in de winkelwagen zit.
+2. De klant kiest extra opties, ziet de prijs en klikt **In winkelwagen**. Zo kunnen meerdere artikelen (elk met een eigen periode) verzameld worden. Het winkelwagen-icoon in de header toont het aantal.
+3. Op **/winkelwagen/** worden prijzen en beschikbaarheid live gecontroleerd. De klant vult één keer zijn gegevens in (afleveradres alleen als er halen en brengen is gekozen) en klikt **Bestelling plaatsen**.
+4. Alle artikelen worden samen gecontroleerd en opgeslagen als boekingen met één bestelnummer en status **Aanvraag**. De beheerder krijgt één e-mail met de hele bestelling, de klant één overzicht. Aanvragen blokkeren de agenda direct.
+5. De beheerder bevestigt de boekingen in wp-admin. In de lijst en op het bewerkscherm zie je welke boekingen bij dezelfde bestelling horen.
 
 De server controleert altijd opnieuw de prijs, beschikbaarheid, datums en verplichte velden. De website toont de prijs alleen vooraf.
 
-## Later: winkelwagen
+## Later uitbreiden
 
-De opbouw is al voorbereid op een winkelwagen:
-- `POST /wp-json/kr/v1/bookings` accepteert een lijst `items` (meerdere artikelen). Alles wordt eerst gevalideerd en daarna samen opgeslagen, met één aanvraagnummer.
-- In de theme-JS zijn `KR.pricing.calculate()`, `KR.booking.createLineItem()` en `KR.booking.submit()` losse functies. Een winkelwagen verzamelt alleen regels en geeft ze bij het afrekenen door aan `submit()`.
-- Wil je later betalen via WooCommerce of Mollie, dan kan een boeking aan een bestelling gekoppeld worden via de hooks `krv_booking_created` en `krv_booking_status_changed`.
+- Online betalen (bijv. Mollie of WooCommerce) kan aan een bestelling gekoppeld worden via de hooks `krv_request_created` (nieuwe bestelling, met bestelnummer en boekings-ID's) en `krv_booking_status_changed`.
+- De winkelwagen staat in de browser van de bezoeker (localStorage); de server controleert bij het bestellen altijd opnieuw prijs en beschikbaarheid.
 
 ## Logo
 

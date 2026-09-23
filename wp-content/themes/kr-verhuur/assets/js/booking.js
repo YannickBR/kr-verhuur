@@ -1,13 +1,8 @@
 /*
- * Reserveren van één huurartikel (productpagina).
+ * Productpagina: huurdagen, aantal en extra opties kiezen → in de winkelwagen.
  *
  * Gegevens komen uit WordPress via window.KRV_BOOKING (zie functions.php).
- * De prijs wordt hier alleen getoond; de server rekent bij het opslaan opnieuw.
- *
- * Opbouw (los van elkaar, zodat later een winkelwagen gekoppeld kan worden):
- *   KR.pricing.calculate(product, selection) → prijsregels + totaal
- *   KR.booking.createLineItem(product, sel)  → één regel zoals die straks in de winkelwagen komt
- *   KR.booking.submit({ items, customer })   → POST /wp-json/kr/v1/bookings (accepteert al meerdere regels)
+ * De prijs wordt hier alleen getoond; de server rekent bij het bestellen opnieuw.
  */
 window.KR = window.KR || {};
 
@@ -17,6 +12,7 @@ window.KR = window.KR || {};
 
   const euro = (n) => new Intl.NumberFormat("nl-NL", { style: "currency", currency: "EUR" }).format(n);
   const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+  KR.util = Object.assign(KR.util || {}, { euro, esc });
 
   KR.pricing = {
     calculate(p, sel) {
@@ -33,22 +29,6 @@ window.KR = window.KR || {};
       });
       const total = Math.round(lines.reduce((s, l) => s + l.amount, 0) * 100) / 100;
       return { lines, total, deposit: p.deposit || 0 };
-    },
-  };
-
-  KR.booking = {
-    createLineItem(p, sel) {
-      return { product_id: p.id, start: sel.start, end: sel.end, quantity: sel.quantity || 1, extras: (sel.extras || []).slice() };
-    },
-    async submit(request) {
-      const res = await fetch(CFG.restUrl + "bookings", {
-        method: "POST",
-        headers: { "Content-Type": "application/json", "X-WP-Nonce": CFG.nonce },
-        body: JSON.stringify(request),
-      });
-      const data = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(data.message || "Versturen mislukt (" + res.status + ")");
-      return data;
     },
   };
 
@@ -69,8 +49,11 @@ window.KR = window.KR || {};
     const icons = CFG.icons || {};
     const D = KR.dates;
     const state = { start: null, end: null, days: 0, quantity: 1, extras: [] };
-    let availability = {}; // { "YYYY-MM-DD": resterend aantal }
+    let availability = {}; // { "YYYY-MM-DD": resterend aantal volgens de server }
+    let inCart = {}; // { "YYYY-MM-DD": aantal van dit artikel al in de winkelwagen }
     let cal;
+
+    const left = (iso) => (iso in availability ? availability[iso] : p.stock) - (inCart[iso] || 0);
 
     const extrasHtml = Object.keys(p.extras)
       .map((k) => {
@@ -83,31 +66,18 @@ window.KR = window.KR || {};
       })
       .join("");
 
-    const needsAddress = () => state.extras.some((k) => p.extras[k] && Number(p.extras[k].needs_address));
-    let step = 1;
-    const stepNo = () => step++;
-
     el.innerHTML =
       "<h2>" + (icons.calendar || "") + "Reserveren</h2>" +
       '<form id="booking-form" novalidate>' +
-      '<div class="booking-step"><h3>' + stepNo() + '. Kies je huurdag(en)</h3><div id="calendar"><p class="cal-hint">Beschikbaarheid laden…</p></div></div>' +
+      '<div class="booking-step"><h3>1. Kies je huurdag(en)</h3><div id="calendar"><p class="cal-hint">Beschikbaarheid laden…</p></div></div>' +
       (p.allowQuantity
         ? '<div class="booking-step"><h3>Aantal <small>(max. ' + p.stock + ")</small></h3>" +
           '<div class="qty"><button type="button" data-q="-1" aria-label="Minder">−</button>' +
           '<input id="qty" type="number" min="1" max="' + p.stock + '" value="1" aria-label="Aantal"><button type="button" data-q="1" aria-label="Meer">+</button></div></div>'
         : "") +
-      (extrasHtml ? '<div class="booking-step"><h3>' + stepNo() + ". Extra opties</h3>" + extrasHtml + "</div>" : "") +
-      '<div class="booking-step"><h3>' + stepNo() + ". Je gegevens</h3>" +
-      '<div class="form-grid">' +
-      '<div class="field full"><label for="f-name">Naam *</label><input id="f-name" name="name" autocomplete="name" required></div>' +
-      '<div class="field"><label for="f-email">E-mail *</label><input id="f-email" name="email" type="email" autocomplete="email" required></div>' +
-      '<div class="field"><label for="f-phone">Telefoon *</label><input id="f-phone" name="phone" type="tel" autocomplete="tel" required></div>' +
-      '<div class="field full hidden" id="address-field"><label for="f-address">Afleveradres *</label><input id="f-address" name="address" autocomplete="street-address" placeholder="Straat, huisnummer, postcode en plaats"></div>' +
-      '<div class="field full"><label for="f-notes">Opmerkingen</label><textarea id="f-notes" name="notes" placeholder="Bijv. gewenste tijden of bijzonderheden"></textarea></div>' +
-      '<div class="hp" aria-hidden="true"><label>Website <input name="website" tabindex="-1" autocomplete="off"></label></div>' +
-      "</div></div>" +
+      (extrasHtml ? '<div class="booking-step"><h3>2. Extra opties</h3>' + extrasHtml + "</div>" : "") +
       '<div class="summary" id="summary"></div>' +
-      '<button class="btn btn-primary btn-block" type="submit" id="submit-btn" disabled>Reservering aanvragen</button>' +
+      '<button class="btn btn-primary btn-block" type="submit" id="submit-btn" disabled>' + (icons.cart || "") + "In winkelwagen</button>" +
       '<div id="booking-msg" aria-live="polite"></div>' +
       "</form>";
 
@@ -115,14 +85,9 @@ window.KR = window.KR || {};
     const summary = el.querySelector("#summary");
     const submitBtn = el.querySelector("#submit-btn");
     const msg = el.querySelector("#booking-msg");
-    const addressField = el.querySelector("#address-field");
 
     function update() {
-      const addr = needsAddress();
-      addressField.classList.toggle("hidden", !addr);
-      addressField.querySelector("input").required = addr;
       submitBtn.disabled = !state.start;
-
       if (!state.start) {
         summary.innerHTML =
           '<div class="summary-row"><span>Kies eerst een datum om de prijs te zien.</span></div>' +
@@ -132,13 +97,13 @@ window.KR = window.KR || {};
       const price = KR.pricing.calculate(p, state);
       summary.innerHTML =
         price.lines.map((l) => '<div class="summary-row"><span>' + esc(l.label) + "</span><span>" + euro(l.amount) + "</span></div>").join("") +
-        '<div class="summary-row summary-total"><span>Totaal</span><span>' + euro(price.total) + "</span></div>" +
-        '<div class="summary-note">' + (price.deposit ? "Excl. borg van " + euro(price.deposit) + ". " : "") + "Prijzen incl. btw. Je ontvangt een bevestiging per e-mail.</div>";
+        '<div class="summary-row summary-total"><span>Subtotaal</span><span>' + euro(price.total) + "</span></div>" +
+        '<div class="summary-note">' + (price.deposit ? "Excl. borg van " + euro(price.deposit) + ". " : "") + "Prijzen incl. btw.</div>";
     }
 
     function buildCalendar() {
       cal = KR.Calendar(el.querySelector("#calendar"), {
-        isBooked: (iso) => iso in availability && availability[iso] < state.quantity,
+        isBooked: (iso) => left(iso) < state.quantity,
         today: CFG.today,
         minDate: D.iso(D.addDays(D.parse(CFG.today), minLead)),
         maxDate: D.iso(D.addDays(D.parse(CFG.today), maxAhead)),
@@ -159,10 +124,17 @@ window.KR = window.KR || {};
         .catch(() => ({}))
         .then((data) => {
           availability = data || {};
+          inCart = KR.cart ? KR.cart.usage(p.id) : {};
         });
     }
 
     loadAvailability().then(buildCalendar);
+
+    // Winkelwagen gewijzigd (bijv. in een ander tabblad): beschikbaarheid bijwerken.
+    document.addEventListener("krv:cart", () => {
+      inCart = KR.cart.usage(p.id);
+      if (cal) cal.refresh();
+    });
 
     el.querySelectorAll('input[name="extra"]').forEach((cb) =>
       cb.addEventListener("change", () => {
@@ -173,53 +145,51 @@ window.KR = window.KR || {};
     );
 
     const qty = el.querySelector("#qty");
+    function setQty(v) {
+      state.quantity = Math.min(p.stock, Math.max(1, parseInt(v, 10) || 1));
+      if (qty) qty.value = state.quantity;
+      if (cal) cal.refresh();
+      update();
+    }
     if (qty) {
-      const setQty = (v) => {
-        state.quantity = Math.min(p.stock, Math.max(1, parseInt(v, 10) || 1));
-        qty.value = state.quantity;
-        if (cal) cal.refresh();
-        update();
-      };
       qty.addEventListener("change", () => setQty(qty.value));
       el.querySelectorAll("[data-q]").forEach((b) => b.addEventListener("click", () => setQty(state.quantity + Number(b.dataset.q))));
     }
 
-    form.addEventListener("submit", async (e) => {
+    form.addEventListener("submit", (e) => {
       e.preventDefault();
-      msg.innerHTML = "";
       if (!state.start) return;
-      if (!form.checkValidity()) {
-        form.reportValidity();
-        return;
-      }
-      const fd = new FormData(form);
-      const request = {
-        items: [KR.booking.createLineItem(p, state)],
-        customer: {
-          name: String(fd.get("name") || "").trim(),
-          email: String(fd.get("email") || "").trim(),
-          phone: String(fd.get("phone") || "").trim(),
-          address: String(fd.get("address") || "").trim(),
-          notes: String(fd.get("notes") || "").trim(),
-        },
-        website: fd.get("website") || "",
-      };
-      submitBtn.disabled = true;
-      submitBtn.textContent = "Bezig met versturen…";
-      try {
-        const r = await KR.booking.submit(request);
-        form.innerHTML =
-          '<div class="alert alert-success booking-done"><strong>Bedankt voor je aanvraag!</strong><br>' +
-          "Je referentie is <strong>" + esc(r.reference) + "</strong>. We hebben een bevestiging naar " + esc(request.customer.email) +
-          " gestuurd en nemen zo snel mogelijk contact met je op.</div>";
-        el.scrollIntoView({ behavior: "smooth", block: "start" });
-      } catch (err) {
-        msg.innerHTML = '<div class="alert alert-error">' + esc(err.message) + "</div>";
-        submitBtn.disabled = false;
-        submitBtn.textContent = "Reservering aanvragen";
-        // Beschikbaarheid kan intussen veranderd zijn.
-        loadAvailability().then(() => cal && cal.refresh());
-      }
+      const price = KR.pricing.calculate(p, state);
+      KR.cart.add({
+        product_id: p.id,
+        name: p.name,
+        url: CFG.productUrl,
+        icon: CFG.productIcon || "",
+        start: state.start,
+        end: state.end,
+        days: state.days,
+        quantity: state.quantity,
+        extras: state.extras.slice(),
+        extraLabels: state.extras.map((k) => p.extras[k].label),
+        needsAddress: state.extras.some((k) => Number(p.extras[k].needs_address)),
+        total: price.total,
+      });
+
+      msg.innerHTML =
+        '<div class="alert alert-success added">' +
+        "<p><strong>" + esc(p.name) + "</strong> staat in je winkelwagen.</p>" +
+        '<div class="added-actions"><a class="btn btn-primary" href="' + esc(CFG.cartUrl) + '">Naar winkelwagen (' + KR.cart.count() + ")</a>" +
+        '<a class="btn btn-outline" href="' + esc(CFG.catalogUrl) + '">Verder winkelen</a></div></div>';
+
+      // Formulier leegmaken voor een eventuele volgende periode.
+      el.querySelectorAll('input[name="extra"]:checked').forEach((cb) => {
+        cb.checked = false;
+        cb.closest(".option").classList.remove("checked");
+      });
+      state.extras = [];
+      setQty(1);
+      if (cal) cal.reset();
+      msg.scrollIntoView({ behavior: "smooth", block: "nearest" });
     });
 
     update();

@@ -59,8 +59,11 @@ add_action(
 				if ( 'draft' === get_post_status( $id ) ) {
 					echo ' — <span class="post-state">Concept</span>';
 				}
-				if ( $b['request_id'] && $b['request_id'] !== krv_booking_ref( $id ) ) {
-					echo '<br><small>Aanvraag ' . esc_html( $b['request_id'] ) . '</small>';
+				if ( $b['request_id'] ) {
+					$n = count( krv_request_bookings( $b['request_id'] ) );
+					if ( $n > 1 ) {
+						echo '<br><small><a href="' . esc_url( admin_url( 'edit.php?post_type=kr_booking&s=' . rawurlencode( $b['request_id'] ) ) ) . '">Bestelling ' . esc_html( $b['request_id'] ) . ' (' . (int) $n . ' artikelen)</a></small>';
+					}
 				}
 				break;
 			case 'krv_customer':
@@ -347,7 +350,7 @@ function krv_export_csv( $ids ) {
 	$out = fopen( 'php://output', 'w' );
 	fwrite( $out, "\xEF\xBB\xBF" ); // BOM zodat Excel de tekens goed toont.
 	$extras = krv_extras();
-	fputcsv( $out, array( 'Boeking', 'Aanvraag', 'Status', 'Aangevraagd', 'Artikel', 'Aantal', 'Van', 'Tot en met', 'Dagen', 'Extra opties', 'Totaal', 'Borg', 'Betaald', 'Naam', 'E-mail', 'Telefoon', 'Adres', 'Opmerkingen', 'Interne notities', 'Bron' ), ';' );
+	fputcsv( $out, array( 'Boeking', 'Bestelling', 'Status', 'Aangevraagd', 'Artikel', 'Aantal', 'Van', 'Tot en met', 'Dagen', 'Extra opties', 'Totaal', 'Borg', 'Betaald', 'Naam', 'E-mail', 'Telefoon', 'Adres', 'Opmerkingen', 'Interne notities', 'Bron' ), ';' );
 	foreach ( $ids as $id ) {
 		$b = krv_get_booking( $id );
 		if ( ! $b ) {
@@ -429,6 +432,10 @@ add_action(
 	function () {
 		add_meta_box( 'krv_booking_details', 'Boekingsgegevens', 'krv_booking_details_box', 'kr_booking', 'normal', 'high' );
 		add_meta_box( 'krv_booking_log', 'Historie', 'krv_booking_log_box', 'kr_booking', 'normal', 'low' );
+		$request = get_post_meta( get_the_ID(), '_krv_request_id', true );
+		if ( $request && count( krv_request_bookings( $request ) ) > 1 ) {
+			add_meta_box( 'krv_booking_order', 'Bestelling ' . $request, 'krv_booking_order_box', 'kr_booking', 'side', 'default' );
+		}
 		add_meta_box( 'krv_booking_status', 'Status & prijs', 'krv_booking_status_box', 'kr_booking', 'side', 'high' );
 	}
 );
@@ -516,6 +523,24 @@ function krv_booking_status_box( $post ) {
 		<p class="description">De prijs wordt bij opslaan opnieuw berekend.</p>
 	<?php endif; ?>
 	<?php
+}
+
+/** Andere artikelen uit dezelfde bestelling. */
+function krv_booking_order_box( $post ) {
+	$request = get_post_meta( $post->ID, '_krv_request_id', true );
+	$total   = 0;
+	echo '<ul style="margin:0">';
+	foreach ( krv_request_bookings( $request ) as $id ) {
+		$b      = krv_get_booking( $id );
+		$total += (float) $b['total'];
+		$label  = ( $b['quantity'] > 1 ? $b['quantity'] . '× ' : '' ) . $b['product_name'];
+		echo '<li style="padding:6px 0;border-bottom:1px solid #f0f0f1">';
+		echo (int) $id === (int) $post->ID ? '<strong>' . esc_html( $label ) . '</strong> (deze)' : '<a href="' . esc_url( get_edit_post_link( $id ) ) . '">' . esc_html( $label ) . '</a>';
+		echo '<br><small>' . esc_html( krv_pretty_period( $b['start'], $b['end'] ) ) . ' · ' . esc_html( krv_euro( $b['total'] ) ) . '</small> ' . krv_status_badge( $b['status'] ); // phpcs:ignore WordPress.Security.EscapeOutput
+		echo '</li>';
+	}
+	echo '</ul><p><strong>Totaal bestelling: ' . esc_html( krv_euro( $total ) ) . '</strong></p>';
+	echo '<p><a class="button" href="' . esc_url( admin_url( 'edit.php?post_type=kr_booking&s=' . rawurlencode( $request ) ) ) . '">Toon hele bestelling</a></p>';
 }
 
 function krv_booking_log_box( $post ) {

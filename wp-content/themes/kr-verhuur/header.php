@@ -14,6 +14,10 @@
 		<a class="brand" href="<?php echo esc_url( home_url( '/' ) ); ?>" aria-label="<?php echo esc_attr( get_bloginfo( 'name' ) ); ?> – home">
 			<?php echo krt_logo( 'light' ); // phpcs:ignore ?>
 		</a>
+		<a class="cart-link" href="<?php echo esc_url( krt_cart_url() ); ?>" aria-label="Winkelwagen">
+			<?php echo krt_icon( 'cart' ); // phpcs:ignore ?>
+			<span class="cart-count" data-cart-count hidden>0</span>
+		</a>
 		<button class="nav-toggle" aria-label="Menu" aria-expanded="false" aria-controls="site-nav">
 			<?php echo krt_icon( 'menu', 'i-open' ) . krt_icon( 'close', 'i-close' ); // phpcs:ignore ?>
 		</button>

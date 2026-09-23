@@ -72,7 +72,12 @@ function krv_availability( $product_id, $from = null, $to = null ) {
  *
  * @return true|WP_Error
  */
-function krv_check_available( $product_id, $start, $end, $quantity, $exclude_id = 0 ) {
+/**
+ * @param array $pending Andere regels uit dezelfde bestelling die nog niet zijn opgeslagen
+ *                       (elk met product_id, start, end, quantity), zodat twee regels in één
+ *                       winkelwagen niet samen meer stuks claimen dan er zijn.
+ */
+function krv_check_available( $product_id, $start, $end, $quantity, $exclude_id = 0, $pending = array() ) {
 	$product = krv_get_product( $product_id );
 	if ( ! $product ) {
 		return new WP_Error( 'krv_product', 'Onbekend artikel.' );
@@ -80,16 +85,35 @@ function krv_check_available( $product_id, $start, $end, $quantity, $exclude_id 
 	if ( $quantity > $product['stock'] ) {
 		return new WP_Error( 'krv_stock', sprintf( 'Er zijn maximaal %d stuks beschikbaar.', $product['stock'] ) );
 	}
-	foreach ( krv_usage( $product_id, $start, $end, $exclude_id ) as $d => $used ) {
-		$left = $product['stock'] - $used;
-		if ( $left < $quantity ) {
+	$usage   = krv_usage( $product_id, $start, $end, $exclude_id );
+	$in_cart = array();
+	foreach ( $pending as $item ) {
+		if ( (int) $item['product_id'] !== (int) $product_id || $item['start'] > $end || $item['end'] < $start ) {
+			continue;
+		}
+		foreach ( krv_date_range( max( $start, $item['start'] ), min( $end, $item['end'] ) ) as $d ) {
+			$in_cart[ $d ] = ( isset( $in_cart[ $d ] ) ? $in_cart[ $d ] : 0 ) + (int) $item['quantity'];
+		}
+	}
+	foreach ( krv_date_range( $start, $end ) as $d ) {
+		$booked = isset( $usage[ $d ] ) ? $usage[ $d ] : 0;
+		$cart   = isset( $in_cart[ $d ] ) ? $in_cart[ $d ] : 0;
+		$left   = $product['stock'] - $booked - $cart;
+		if ( $left >= $quantity ) {
+			continue;
+		}
+		if ( $cart > 0 && $product['stock'] - $booked >= $quantity ) {
 			return new WP_Error(
 				'krv_unavailable',
-				$left > 0
-					? sprintf( 'Op %s zijn nog maar %d stuks beschikbaar.', krv_pretty_date( $d ), $left )
-					: sprintf( '%s is op %s al verhuurd.', $product['name'], krv_pretty_date( $d ) )
+				sprintf( '%s zit voor %s al in je winkelwagen; samen is dat meer dan de %d beschikbare stuks.', $product['name'], krv_pretty_date( $d ), $product['stock'] )
 			);
 		}
+		return new WP_Error(
+			'krv_unavailable',
+			$left > 0
+				? sprintf( '%s: op %s zijn nog maar %d stuks beschikbaar.', $product['name'], krv_pretty_date( $d ), $left )
+				: sprintf( '%s is op %s al verhuurd.', $product['name'], krv_pretty_date( $d ) )
+		);
 	}
 	return true;
 }

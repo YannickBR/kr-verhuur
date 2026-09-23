@@ -8,7 +8,7 @@
 
 defined( 'ABSPATH' ) || exit;
 
-define( 'KRT_VERSION', '1.0.0' );
+define( 'KRT_VERSION', '1.1.0' );
 
 require_once get_template_directory() . '/inc/template-tags.php';
 
@@ -43,10 +43,31 @@ add_action(
 		wp_enqueue_style( 'krt-main', $uri . '/assets/css/main.css', array(), KRT_VERSION );
 		wp_enqueue_script( 'krt-nav', $uri . '/assets/js/nav.js', array(), KRT_VERSION, true );
 
-		if ( krt_has_plugin() && is_singular( 'kr_product' ) ) {
+		if ( ! krt_has_plugin() ) {
+			return;
+		}
+		wp_enqueue_script( 'krt-cart', $uri . '/assets/js/cart.js', array(), KRT_VERSION, true );
+
+		if ( krv_is_cart() ) {
+			wp_enqueue_script( 'krt-calendar', $uri . '/assets/js/calendar.js', array(), KRT_VERSION, true );
+			wp_enqueue_script( 'krt-cart-page', $uri . '/assets/js/cart-page.js', array( 'krt-cart', 'krt-calendar' ), KRT_VERSION, true );
+			wp_localize_script(
+				'krt-cart-page',
+				'KRV_CART',
+				array(
+					'restUrl'    => esc_url_raw( rest_url( 'kr/v1/' ) ),
+					'nonce'      => wp_create_nonce( 'wp_rest' ),
+					'catalogUrl' => krt_catalog_url(),
+					'homeUrl'    => home_url( '/' ),
+					'icons'      => krt_icons_for_js(),
+				)
+			);
+		}
+
+		if ( is_singular( 'kr_product' ) ) {
 			$p = krv_get_product( get_queried_object_id() );
 			wp_enqueue_script( 'krt-calendar', $uri . '/assets/js/calendar.js', array(), KRT_VERSION, true );
-			wp_enqueue_script( 'krt-booking', $uri . '/assets/js/booking.js', array( 'krt-calendar' ), KRT_VERSION, true );
+			wp_enqueue_script( 'krt-booking', $uri . '/assets/js/booking.js', array( 'krt-calendar', 'krt-cart' ), KRT_VERSION, true );
 
 			$extras = array();
 			foreach ( $p['extras'] as $key ) {
@@ -62,6 +83,9 @@ add_action(
 					'maxAhead'  => (int) krv_setting( 'max_days_ahead' ),
 					'today'     => krv_today(),
 					'icons'     => krt_icons_for_js(),
+					'cartUrl'    => krv_cart_url(),
+					'catalogUrl' => krt_catalog_url(),
+					'productUrl' => get_permalink( $p['id'] ),
 					'product'   => array(
 						'id'             => $p['id'],
 						'name'           => $p['name'],
@@ -132,4 +156,41 @@ function krt_default_menu() {
 function krt_catalog_url() {
 	$url = krt_has_plugin() ? get_post_type_archive_link( 'kr_product' ) : '';
 	return $url ? $url : home_url( '/huren/' );
+}
+
+/* Winkelwagenpagina (/winkelwagen/, geregistreerd door de plugin). */
+add_filter(
+	'template_include',
+	function ( $template ) {
+		if ( krt_has_plugin() && krv_is_cart() ) {
+			status_header( 200 );
+			return get_template_directory() . '/cart.php';
+		}
+		return $template;
+	}
+);
+
+add_filter(
+	'document_title_parts',
+	function ( $parts ) {
+		if ( krt_has_plugin() && krv_is_cart() ) {
+			$parts['title'] = 'Winkelwagen';
+		}
+		return $parts;
+	}
+);
+
+add_filter(
+	'wp_robots',
+	function ( $robots ) {
+		if ( krt_has_plugin() && krv_is_cart() ) {
+			$robots['noindex'] = true;
+		}
+		return $robots;
+	}
+);
+
+/** Link naar de winkelwagen. */
+function krt_cart_url() {
+	return krt_has_plugin() ? krv_cart_url() : home_url( '/winkelwagen/' );
 }

@@ -60,7 +60,7 @@ function krv_booking_ref( $id ) {
  * @return array|WP_Error Genormaliseerde gegevens (incl. prijs).
  */
 function krv_validate_booking( $in, $opts = array() ) {
-	$opts    = wp_parse_args( $opts, array( 'context' => 'public', 'exclude_id' => 0, 'force' => false ) );
+	$opts    = wp_parse_args( $opts, array( 'context' => 'public', 'exclude_id' => 0, 'force' => false, 'pending' => array(), 'skip_customer' => false ) );
 	$public  = 'public' === $opts['context'];
 	$product = krv_get_product( isset( $in['product_id'] ) ? (int) $in['product_id'] : 0 );
 	if ( ! $product || ( $public && 'publish' !== get_post_status( $product['id'] ) ) ) {
@@ -100,10 +100,10 @@ function krv_validate_booking( $in, $opts = array() ) {
 		'address' => sanitize_textarea_field( isset( $in['address'] ) ? $in['address'] : '' ),
 		'notes'   => sanitize_textarea_field( isset( $in['notes'] ) ? $in['notes'] : '' ),
 	);
-	if ( '' === $customer['name'] ) {
+	if ( '' === $customer['name'] && ! $opts['skip_customer'] ) {
 		return new WP_Error( 'krv_customer', 'Vul je naam in.' );
 	}
-	if ( $public ) {
+	if ( $public && ! $opts['skip_customer'] ) {
 		if ( ! is_email( $customer['email'] ) ) {
 			return new WP_Error( 'krv_customer', 'Vul een geldig e-mailadres in.' );
 		}
@@ -119,7 +119,7 @@ function krv_validate_booking( $in, $opts = array() ) {
 	}
 
 	if ( ! $opts['force'] ) {
-		$ok = krv_check_available( $product['id'], $start, $end, $quantity, $opts['exclude_id'] );
+		$ok = krv_check_available( $product['id'], $start, $end, $quantity, $opts['exclude_id'], $opts['pending'] );
 		if ( is_wp_error( $ok ) ) {
 			return $ok;
 		}
@@ -158,7 +158,7 @@ function krv_save_booking_data( $id, $data ) {
 		array(
 			'ID'           => $id,
 			'post_title'   => krv_booking_ref( $id ) . ' – ' . $b['name'] . ' – ' . $b['product_name'],
-			'post_content' => implode( "\n", array( $b['email'], $b['phone'], $b['address'], $b['notes'] ) ),
+			'post_content' => implode( "\n", array( $b['request_id'], $b['email'], $b['phone'], $b['address'], $b['notes'] ) ),
 			'post_status'  => 'publish',
 		)
 	);
@@ -191,6 +191,21 @@ function krv_create_booking( $data, $status = 'pending', $source = 'website', $r
 	krv_log( $id, 'Boeking aangemaakt via ' . ( 'admin' === $source ? 'beheer' : 'website' ) . ' (status: ' . krv_statuses()[ $status ] . ').' );
 	do_action( 'krv_booking_created', $id );
 	return $id;
+}
+
+/** Alle boekingen (regels) van één bestelling. */
+function krv_request_bookings( $request_id ) {
+	return get_posts(
+		array(
+			'post_type'   => 'kr_booking',
+			'numberposts' => -1,
+			'fields'      => 'ids',
+			'orderby'     => 'ID',
+			'order'       => 'ASC',
+			'meta_key'    => '_krv_request_id',
+			'meta_value'  => $request_id,
+		)
+	);
 }
 
 /** Status wijzigen (met logregel en hook voor e-mails). */

@@ -191,3 +191,38 @@ function krv_group_from_price( $term ) {
 	}
 	return $prices ? min( $prices ) : null;
 }
+
+/* ---------------------------------------------------------------------------
+ * Winkelwagen-pagina: /winkelwagen/ (weergave via het theme)
+ * ------------------------------------------------------------------------- */
+
+add_action(
+	'init',
+	function () {
+		add_rewrite_rule( '^winkelwagen/?$', 'index.php?krv_cart=1', 'top' );
+		// Na een update van de plugin de permalinks eenmalig vernieuwen.
+		if ( get_option( 'krv_rewrite_version' ) !== KRV_VERSION ) {
+			flush_rewrite_rules( false );
+			update_option( 'krv_rewrite_version', KRV_VERSION );
+		}
+	},
+	20
+);
+
+add_filter(
+	'query_vars',
+	function ( $vars ) {
+		$vars[] = 'krv_cart';
+		return $vars;
+	}
+);
+
+/** Is dit de winkelwagen-pagina? */
+function krv_is_cart() {
+	return (bool) get_query_var( 'krv_cart' );
+}
+
+/** URL van de winkelwagen (werkt ook zonder mooie permalinks). */
+function krv_cart_url() {
+	return get_option( 'permalink_structure' ) ? home_url( '/winkelwagen/' ) : add_query_arg( 'krv_cart', 1, home_url( '/' ) );
+}

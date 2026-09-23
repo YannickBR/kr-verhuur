@@ -50,8 +50,8 @@ $region = krt_setting( 'region' );
 		<div class="steps">
 			<div class="step"><h3>Kies je product</h3><p>Blader door onze huurgroepen en kies wat je nodig hebt.</p></div>
 			<div class="step"><h3>Selecteer je dagen</h3><p>Kies in de kalender één dag of een hele periode. Bezette dagen zie je meteen.</p></div>
-			<div class="step"><h3>Kies extra's</h3><p>Halen en brengen, opbouwen of schoonmaak? Vink het aan en zie direct de totaalprijs.</p></div>
-			<div class="step"><h3>Klaar!</h3><p>Verstuur je aanvraag. Wij bevestigen je reservering zo snel mogelijk.</p></div>
+			<div class="step"><h3>In je winkelwagen</h3><p>Kies extra's zoals halen en brengen of schoonmaak en leg het in je winkelwagen. Zo verzamel je alles wat je nodig hebt.</p></div>
+			<div class="step"><h3>Eén keer bestellen</h3><p>Bestel alles in één keer. Wij bevestigen je reservering zo snel mogelijk.</p></div>
 		</div>
 	</div>
 </section>
