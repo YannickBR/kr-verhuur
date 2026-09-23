@@ -37,19 +37,6 @@ $region = krt_setting( 'region' );
 </section>
 <?php endif; ?>
 
-<?php
-// Eigen tekst van de homepage (als er een statische voorpagina met inhoud is ingesteld).
-if ( is_page() && have_posts() ) :
-	while ( have_posts() ) :
-		the_post();
-		if ( trim( get_the_content() ) ) :
-			?>
-			<section class="section"><div class="container"><div class="card entry-content"><?php the_content(); ?></div></div></section>
-			<?php
-		endif;
-	endwhile;
-endif;
-?>
 
 <section class="section" id="hoe-werkt-het">
 	<div class="container">
