@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 200" role="img" aria-label="KR Verhuur – Voor als je het zelf niet hebt!">
+  <!-- Nagebouwd logo. Vervang gerust door het originele bestand (zelfde naam). -->
+  <g fill="#519f81">
+    <path d="M18 0h46v172a24 24 0 0 1-24 24H18A18 18 0 0 1 0 178V18A18 18 0 0 1 18 0z"/>
+    <circle cx="118" cy="62" r="35"/>
+    <path d="M82 108l68 25a20 20 0 0 1 13 19v44l-68-27a20 20 0 0 1-13-19z"/>
+  </g>
+  <text x="222" y="118" font-family="Nunito, 'Varela Round', Arial, sans-serif" font-size="118" font-weight="900" fill="#002533" letter-spacing="-2">KRverhuur</text>
+  <text x="226" y="178" font-family="Nunito, 'Varela Round', Arial, sans-serif" font-size="44" font-weight="600" fill="#002533">Voor als je het zelf niet hebt!</text>
+</svg>
