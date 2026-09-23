@@ -2,11 +2,13 @@
  * Kalender met periodeselectie (1 of meerdere dagen).
  *
  *   const cal = KR.Calendar(el, {
- *     booked: ["2026-10-03"],     // niet-beschikbare dagen
- *     minDate, maxDate,           // Date-objecten
- *     maxDays: 7,                 // maximale lengte van een periode
+ *     isBooked(iso) → true/false,  // dag (voor het gekozen aantal) niet beschikbaar
+ *     minDate, maxDate,            // "YYYY-MM-DD"
+ *     today,                       // "YYYY-MM-DD" (tijdzone van de site)
+ *     maxDays: 7,                  // maximale lengte van een periode
  *     onChange({ start, end, days })  // start/end als "YYYY-MM-DD" (of null)
  *   });
+ *   cal.refresh();                 // opnieuw tekenen na wijziging beschikbaarheid/aantal
  */
 window.KR = window.KR || {};
 
@@ -33,12 +35,11 @@ KR.dates = {
 
 KR.Calendar = function (el, opts) {
   const D = KR.dates;
-  const icon = KR.icons;
-  const booked = new Set(opts.booked || []);
-  const today = new Date();
-  const todayIso = D.iso(today);
-  const minIso = D.iso(opts.minDate || today);
-  const maxIso = D.iso(opts.maxDate || D.addDays(today, 365));
+  const icons = opts.icons || {};
+  const isBooked = opts.isBooked || (() => false);
+  const todayIso = opts.today || D.iso(new Date());
+  const minIso = opts.minDate || todayIso;
+  const maxIso = opts.maxDate || D.iso(D.addDays(D.parse(todayIso), 365));
   const maxDays = opts.maxDays || 365;
 
   let view = D.parse(minIso);
@@ -47,7 +48,7 @@ KR.Calendar = function (el, opts) {
   let end = null;
   let message = "";
 
-  const available = (iso) => iso >= minIso && iso <= maxIso && !booked.has(iso);
+  const available = (iso) => iso >= minIso && iso <= maxIso && !isBooked(iso);
 
   // Is de hele periode vrij?
   function rangeFree(a, b) {
@@ -106,8 +107,8 @@ KR.Calendar = function (el, opts) {
     for (let day = 1; day <= daysInMonth; day++) {
       const iso = D.iso(new Date(y, m, day));
       const cls = ["cal-day"];
-      const isBooked = booked.has(iso);
-      if (isBooked) cls.push("booked");
+      const booked = iso >= minIso && iso <= maxIso && isBooked(iso);
+      if (booked) cls.push("booked");
       if (iso === todayIso) cls.push("today");
       if (start && iso === start) cls.push("start");
       if (rangeEnd && iso === rangeEnd) cls.push("end");
@@ -115,7 +116,7 @@ KR.Calendar = function (el, opts) {
       const dis = !available(iso);
       cells +=
         '<button type="button" class="' + cls.join(" ") + '" data-date="' + iso + '"' + (dis ? " disabled" : "") +
-        ' aria-label="' + D.pretty(iso) + (isBooked ? " (bezet)" : "") + '"' +
+        ' aria-label="' + D.pretty(iso) + (booked ? " (bezet)" : "") + '"' +
         (start && iso >= start && iso <= rangeEnd ? ' aria-pressed="true"' : "") + ">" + day + "</button>";
     }
 
@@ -130,8 +131,8 @@ KR.Calendar = function (el, opts) {
 
     el.innerHTML =
       '<div class="cal"><div class="cal-head"><span class="cal-title">' + title + "</span>" +
-      '<div class="cal-nav"><button type="button" data-nav="-1" aria-label="Vorige maand"' + (canPrev ? "" : " disabled") + ">" + icon("chevronLeft") + "</button>" +
-      '<button type="button" data-nav="1" aria-label="Volgende maand"' + (canNext ? "" : " disabled") + ">" + icon("chevronRight") + "</button></div></div>" +
+      '<div class="cal-nav"><button type="button" data-nav="-1" aria-label="Vorige maand"' + (canPrev ? "" : " disabled") + ">" + (icons.chevronLeft || "‹") + "</button>" +
+      '<button type="button" data-nav="1" aria-label="Volgende maand"' + (canNext ? "" : " disabled") + ">" + (icons.chevronRight || "›") + "</button></div></div>" +
       '<div class="cal-grid">' + cells + "</div>" +
       '<div class="cal-legend"><span><i style="background:var(--green)"></i>Geselecteerd</span>' +
       '<span><i style="background:#fbf1f0;border:1px solid #e8c9c6"></i>Bezet</span>' +
@@ -153,6 +154,17 @@ KR.Calendar = function (el, opts) {
   render();
 
   return {
+    // Na een wijziging in beschikbaarheid: selectie wissen als die niet meer vrij is.
+    refresh() {
+      if (start && !rangeFree(start, end || start)) {
+        start = end = null;
+        message = "Je gekozen periode is niet meer (voor dit aantal) beschikbaar.";
+        render();
+        emit();
+        return;
+      }
+      render();
+    },
     reset() {
       start = end = null;
       message = "";
