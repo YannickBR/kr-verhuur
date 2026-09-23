@@ -2,6 +2,8 @@
 /**
  * Prijsberekening. Dezelfde regels staan in de theme-JS (alleen voor weergave);
  * de server rekent altijd opnieuw bij het opslaan van een boeking.
+ *
+ * Alle bedragen die hier uitkomen zijn INCLUSIEF btw (zie krv_entered_to_incl()).
  */
 
 defined( 'ABSPATH' ) || exit;
@@ -16,10 +18,10 @@ defined( 'ABSPATH' ) || exit;
 function krv_calculate_price( $product, $days, $quantity = 1, $extras = array() ) {
 	$days     = max( 1, (int) $days );
 	$quantity = max( 1, (int) $quantity );
-	$all      = krv_extras();
+	$all      = krv_extras_incl();
 	$lines    = array();
 
-	$rent    = ( $product['price_day'] + ( $days - 1 ) * $product['price_extra_day'] ) * $quantity;
+	$rent    = krv_entered_to_incl( ( $product['price_day'] + ( $days - 1 ) * $product['price_extra_day'] ) * $quantity );
 	$lines[] = array(
 		'key'    => 'rent',
 		'label'  => ( $quantity > 1 ? $quantity . '× ' : '' ) . 'Huur ' . $days . ( 1 === $days ? ' dag' : ' dagen' ),

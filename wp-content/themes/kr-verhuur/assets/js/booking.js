@@ -14,6 +14,12 @@ window.KR = window.KR || {};
   const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
   KR.util = Object.assign(KR.util || {}, { euro, esc });
 
+  // Bedragen zijn intern incl. btw; weergave volgens de instelling (incl. of excl. btw).
+  const vatRate = Number(CFG.vat && CFG.vat.rate) || 0;
+  const showExcl = !!Number(CFG.vat && CFG.vat.showExcl);
+  const vatLabel = showExcl ? "excl. btw" : "incl. btw";
+  const show = (incl) => euro(showExcl ? incl / (1 + vatRate / 100) : incl);
+
   KR.pricing = {
     calculate(p, sel) {
       const days = Math.max(1, sel.days || 1);
@@ -60,7 +66,7 @@ window.KR = window.KR || {};
         const x = p.extras[k];
         return (
           '<label class="option"><input type="checkbox" name="extra" value="' + esc(k) + '">' +
-          '<span class="option-body"><span class="option-title"><span>' + esc(x.label) + "</span><span>+ " + euro(x.price) +
+          '<span class="option-body"><span class="option-title"><span>' + esc(x.label) + "</span><span>+ " + show(Number(x.price)) +
           (x.type === "perDay" ? " p/d" : "") + '</span></span><span class="option-desc">' + esc(x.description || "") + "</span></span></label>"
         );
       })
@@ -91,14 +97,14 @@ window.KR = window.KR || {};
       if (!state.start) {
         summary.innerHTML =
           '<div class="summary-row"><span>Kies eerst een datum om de prijs te zien.</span></div>' +
-          '<div class="summary-row"><span>Vanaf</span><span>' + euro(p.priceDay) + " / dag</span></div>";
+          '<div class="summary-row"><span>Vanaf</span><span>' + show(p.priceDay) + " / dag</span></div>";
         return;
       }
       const price = KR.pricing.calculate(p, state);
       summary.innerHTML =
-        price.lines.map((l) => '<div class="summary-row"><span>' + esc(l.label) + "</span><span>" + euro(l.amount) + "</span></div>").join("") +
-        '<div class="summary-row summary-total"><span>Subtotaal</span><span>' + euro(price.total) + "</span></div>" +
-        '<div class="summary-note">' + (price.deposit ? "Excl. borg van " + euro(price.deposit) + ". " : "") + "Prijzen incl. btw.</div>";
+        price.lines.map((l) => '<div class="summary-row"><span>' + esc(l.label) + "</span><span>" + show(l.amount) + "</span></div>").join("") +
+        '<div class="summary-row summary-total"><span>Subtotaal <small>' + vatLabel + "</small></span><span>" + show(price.total) + "</span></div>" +
+        '<div class="summary-note">' + (price.deposit ? "Excl. borg van " + euro(price.deposit) + ". " : "") + "Prijzen " + vatLabel + ".</div>";
     }
 
     function buildCalendar() {

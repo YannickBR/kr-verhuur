@@ -41,7 +41,7 @@
 		</div>
 		<div class="footer-bottom">
 			<span>&copy; <?php echo esc_html( wp_date( 'Y' ) . ' ' . krt_setting( 'company_name', get_bloginfo( 'name' ) ) ); ?></span>
-			<span>Alle prijzen incl. btw</span>
+			<span>Alle prijzen <?php echo esc_html( krt_vat_label() ); ?></span>
 		</div>
 	</div>
 </footer>

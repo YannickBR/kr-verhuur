@@ -38,6 +38,12 @@ Tip: installeer een SMTP-plugin (bijv. WP Mail SMTP) zodat bevestigingsmails bet
 
 **Boekingen → Instellingen** – contactgegevens, hoeveel dagen vooruit geboekt kan worden, welke statussen de agenda blokkeren, en de extra opties (halen en brengen, schoonmaakkosten, opbouwen, …) met prijs per boeking of per dag.
 
+**Btw** (ook onder Boekingen → Instellingen):
+- *Prijzen op de website tonen*: **inclusief** of **exclusief btw**. Dit geldt voor de hele site: artikelkaarten, tarieven, extra opties, winkelwagen, footer en e-mails. Bij exclusief toont de winkelwagen subtotaal excl. btw, het btw-bedrag en het totaal incl. btw.
+- *Ingevoerde prijzen zijn*: incl. of excl. btw (hoe je prijzen bij artikelen en extra opties invult).
+- *Btw-percentage* (standaard 21%).
+- Boekingen slaan het bedrag altijd **incl. btw** op (wat de klant betaalt); in het beheer staat het btw-bedrag erbij. De borg valt buiten de btw.
+
 ## Hoe reserveren werkt (winkelwagen)
 
 1. De klant kiest op de productpagina één dag (één klik) of een periode (twee klikken). Volgeboekte dagen zijn doorgestreept; bij artikelen met voorraad telt het gekozen aantal mee, inclusief wat al in de winkelwagen zit.

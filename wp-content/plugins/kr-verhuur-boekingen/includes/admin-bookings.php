@@ -479,7 +479,7 @@ function krv_booking_details_box( $post ) {
 		<div><label for="krv_start">Eerste huurdag</label><input type="date" id="krv_start" name="krvb[start]" value="<?php echo esc_attr( $b['start'] ); ?>" required></div>
 		<div><label for="krv_end">Laatste huurdag</label><input type="date" id="krv_end" name="krvb[end]" value="<?php echo esc_attr( $b['end'] ); ?>"></div>
 		<div><label for="krv_quantity">Aantal</label><input type="number" min="1" id="krv_quantity" name="krvb[quantity]" value="<?php echo esc_attr( $b['quantity'] ); ?>"></div>
-		<div><label for="krv_discount">Korting (€)</label><input type="number" step="0.01" min="0" id="krv_discount" name="krvb[discount]" value="<?php echo esc_attr( get_post_meta( $post->ID, '_krv_discount', true ) ); ?>"></div>
+		<div><label for="krv_discount">Korting (€ incl. btw)</label><input type="number" step="0.01" min="0" id="krv_discount" name="krvb[discount]" value="<?php echo esc_attr( get_post_meta( $post->ID, '_krv_discount', true ) ); ?>"></div>
 		<div class="full"><label>Extra opties</label>
 			<div class="krv-extras-list">
 				<?php foreach ( krv_extras() as $k => $x ) : ?>
@@ -512,10 +512,13 @@ function krv_booking_status_box( $post ) {
 	<p><label><input type="checkbox" name="krvb[force]" value="1"> Beschikbaarheid negeren <span style="color:#646970">(dubbel boeken toestaan)</span></label></p>
 	<?php if ( $b['lines'] ) : ?>
 		<table style="width:100%;border-top:1px solid #dcdcde;margin-top:10px;padding-top:6px">
+			<tr><td colspan="2" style="color:#646970;font-size:12px">Bedragen incl. btw</td></tr>
 			<?php foreach ( (array) $b['lines'] as $l ) : ?>
 				<tr><td><?php echo esc_html( $l['label'] ); ?></td><td style="text-align:right"><?php echo esc_html( krv_euro( $l['amount'] ) ); ?></td></tr>
 			<?php endforeach; ?>
-			<tr><td><strong>Totaal</strong></td><td style="text-align:right"><strong><?php echo esc_html( krv_euro( $b['total'] ) ); ?></strong></td></tr>
+			<?php $vat = krv_vat_breakdown( $b['total'] ); ?>
+			<tr><td><strong>Totaal incl. btw</strong></td><td style="text-align:right"><strong><?php echo esc_html( krv_euro( $b['total'] ) ); ?></strong></td></tr>
+			<tr><td style="color:#646970">Waarvan btw (<?php echo esc_html( $vat['rate'] ); ?>%)</td><td style="text-align:right;color:#646970"><?php echo esc_html( krv_euro( $vat['vat'] ) ); ?></td></tr>
 			<?php if ( $b['deposit'] > 0 ) : ?>
 				<tr><td>Borg</td><td style="text-align:right"><?php echo esc_html( krv_euro( $b['deposit'] ) ); ?></td></tr>
 			<?php endif; ?>

@@ -35,6 +35,7 @@ add_action(
 function krv_product_metabox( $post ) {
 	$p = krv_get_product( $post );
 	$raw_extra = get_post_meta( $post->ID, '_krv_price_extra_day', true );
+	$vat_label = krv_setting( 'prices_incl_vat' ) ? 'incl. btw' : 'excl. btw';
 	wp_nonce_field( 'krv_product', 'krv_product_nonce' );
 	?>
 	<style>
@@ -45,9 +46,9 @@ function krv_product_metabox( $post ) {
 		.krv-help{color:#646970;font-size:12px;margin-top:2px}
 	</style>
 	<div class="krv-grid">
-		<div><label for="krv_price_day">Prijs eerste dag (€)</label>
+		<div><label for="krv_price_day">Prijs eerste dag (€ <?php echo esc_html( $vat_label ); ?>)</label>
 			<input type="number" step="0.01" min="0" id="krv_price_day" name="krv[price_day]" value="<?php echo esc_attr( $p['price_day'] ); ?>"></div>
-		<div><label for="krv_price_extra_day">Prijs per extra dag (€)</label>
+		<div><label for="krv_price_extra_day">Prijs per extra dag (€ <?php echo esc_html( $vat_label ); ?>)</label>
 			<input type="number" step="0.01" min="0" id="krv_price_extra_day" name="krv[price_extra_day]" value="<?php echo esc_attr( $raw_extra ); ?>" placeholder="gelijk aan eerste dag"></div>
 		<div><label for="krv_deposit">Borg (€)</label>
 			<input type="number" step="0.01" min="0" id="krv_deposit" name="krv[deposit]" value="<?php echo esc_attr( $p['deposit'] ); ?>"></div>

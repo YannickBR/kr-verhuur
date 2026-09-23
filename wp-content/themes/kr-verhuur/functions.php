@@ -59,6 +59,7 @@ add_action(
 					'nonce'      => wp_create_nonce( 'wp_rest' ),
 					'catalogUrl' => krt_catalog_url(),
 					'homeUrl'    => home_url( '/' ),
+					'vat'        => krt_vat_for_js(),
 					'icons'      => krt_icons_for_js(),
 				)
 			);
@@ -69,9 +70,11 @@ add_action(
 			wp_enqueue_script( 'krt-calendar', $uri . '/assets/js/calendar.js', array(), KRT_VERSION, true );
 			wp_enqueue_script( 'krt-booking', $uri . '/assets/js/booking.js', array( 'krt-calendar', 'krt-cart' ), KRT_VERSION, true );
 
-			$extras = array();
+			// Prijzen gaan altijd incl. btw naar de JS; die rekent zo nodig om voor weergave.
+			$all_extras = krv_extras_incl();
+			$extras     = array();
 			foreach ( $p['extras'] as $key ) {
-				$extras[ $key ] = krv_extras()[ $key ];
+				$extras[ $key ] = $all_extras[ $key ];
 			}
 			wp_localize_script(
 				'krt-booking',
@@ -83,14 +86,15 @@ add_action(
 					'maxAhead'  => (int) krv_setting( 'max_days_ahead' ),
 					'today'     => krv_today(),
 					'icons'     => krt_icons_for_js(),
+					'vat'       => krt_vat_for_js(),
 					'cartUrl'    => krv_cart_url(),
 					'catalogUrl' => krt_catalog_url(),
 					'productUrl' => get_permalink( $p['id'] ),
 					'product'   => array(
 						'id'             => $p['id'],
 						'name'           => $p['name'],
-						'priceDay'       => $p['price_day'],
-						'priceExtraDay'  => $p['price_extra_day'],
+						'priceDay'       => krv_entered_to_incl( $p['price_day'] ),
+						'priceExtraDay'  => krv_entered_to_incl( $p['price_extra_day'] ),
 						'deposit'        => $p['deposit'],
 						'maxDays'        => $p['max_days'],
 						'stock'          => $p['stock'],
@@ -193,4 +197,12 @@ add_filter(
 /** Link naar de winkelwagen. */
 function krt_cart_url() {
 	return krt_has_plugin() ? krv_cart_url() : home_url( '/winkelwagen/' );
+}
+
+/** Btw-instellingen voor de JS. */
+function krt_vat_for_js() {
+	return array(
+		'rate'     => krv_vat_rate(),
+		'showExcl' => krv_show_excl_vat() ? 1 : 0,
+	);
 }

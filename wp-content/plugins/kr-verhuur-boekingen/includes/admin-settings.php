@@ -32,6 +32,9 @@ add_action(
 			'max_days_ahead'  => max( 7, (int) ( $in['max_days_ahead'] ?? 365 ) ),
 			'blocking_status' => array_values( array_intersect( (array) ( $in['blocking_status'] ?? array() ), array( 'pending', 'confirmed' ) ) ),
 		);
+		$settings['vat_rate']        = max( 0, min( 100, (float) str_replace( ',', '.', $in['vat_rate'] ?? 21 ) ) );
+		$settings['prices_incl_vat'] = ( $in['prices_incl_vat'] ?? '1' ) === '1' ? 1 : 0;
+		$settings['display_vat']     = 'excl' === ( $in['display_vat'] ?? 'incl' ) ? 'excl' : 'incl';
 		if ( ! $settings['blocking_status'] ) {
 			$settings['blocking_status'] = array( 'confirmed' );
 		}
@@ -105,10 +108,23 @@ function krv_settings_page() {
 					<p class="description">Standaard blokkeren ook nog niet bevestigde aanvragen de agenda, zodat er niet dubbel geboekt wordt.</p></td></tr>
 			</table>
 
+			<h2>Btw</h2>
+			<table class="form-table" role="presentation">
+				<tr><th>Prijzen op de website tonen</th><td>
+					<label><input type="radio" name="krv[display_vat]" value="incl" <?php checked( 'incl', $s['display_vat'] ); ?>> Inclusief btw</label><br>
+					<label><input type="radio" name="krv[display_vat]" value="excl" <?php checked( 'excl', $s['display_vat'] ); ?>> Exclusief btw</label>
+					<p class="description">Geldt voor de hele website: artikelen, extra opties, winkelwagen en e-mails. Bij exclusief wordt in de winkelwagen de btw en het totaal inclusief btw apart getoond.</p></td></tr>
+				<tr><th>Ingevoerde prijzen zijn</th><td>
+					<label><input type="radio" name="krv[prices_incl_vat]" value="1" <?php checked( 1, (int) $s['prices_incl_vat'] ); ?>> Inclusief btw</label><br>
+					<label><input type="radio" name="krv[prices_incl_vat]" value="0" <?php checked( 0, (int) $s['prices_incl_vat'] ); ?>> Exclusief btw</label>
+					<p class="description">Hoe je de prijzen bij huurartikelen en extra opties invult. Borg valt buiten de btw.</p></td></tr>
+				<tr><th><label for="vat_rate">Btw-percentage</label></th><td><input type="number" step="0.1" min="0" max="100" id="vat_rate" name="krv[vat_rate]" value="<?php echo esc_attr( $s['vat_rate'] ); ?>" style="width:80px"> %</td></tr>
+			</table>
+
 			<h2>Extra opties</h2>
 			<p class="description">Bijvoorbeeld halen en brengen of schoonmaakkosten. Per huurartikel kies je welke opties beschikbaar zijn.</p>
 			<table class="widefat striped" id="krv-extras" style="max-width:1100px">
-				<thead><tr><th>Naam</th><th>Omschrijving</th><th style="width:100px">Prijs (€)</th><th style="width:130px">Berekening</th><th style="width:90px">Vraagt adres</th><th style="width:70px">Verwijder</th></tr></thead>
+				<thead><tr><th>Naam</th><th>Omschrijving</th><th style="width:100px">Prijs (€ <?php echo $s['prices_incl_vat'] ? 'incl.' : 'excl.'; ?> btw)</th><th style="width:130px">Berekening</th><th style="width:90px">Vraagt adres</th><th style="width:70px">Verwijder</th></tr></thead>
 				<tbody>
 				<?php
 				$i = 0;

@@ -393,3 +393,6 @@ p { margin: 0 0 1em; }
   .cart-item-side { flex-direction: row; align-items: center; }
 }
 .added p { margin: 0; }
+.vat-note { font-size: .8rem; font-weight: 700; color: var(--muted); }
+.summary-total small { font-size: .75rem; font-weight: 700; color: var(--muted); }
+.summary-vat { font-size: .85rem; color: var(--muted); }

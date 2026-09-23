@@ -10,6 +10,12 @@
   const euro = (n) => new Intl.NumberFormat("nl-NL", { style: "currency", currency: "EUR" }).format(n);
   const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
   const D = KR.dates;
+
+  // Bedragen van de server zijn incl. btw; weergave volgens de instelling.
+  const vatRate = Number(CFG.vat && CFG.vat.rate) || 0;
+  const showExcl = !!Number(CFG.vat && CFG.vat.showExcl);
+  const toExcl = (incl) => Math.round((incl / (1 + vatRate / 100)) * 100) / 100;
+  const show = (incl) => euro(showExcl ? toExcl(incl) : incl);
   const icons = CFG.icons || {};
 
   let checks = []; // resultaat van /cart/validate, zelfde volgorde als de winkelwagen
@@ -41,6 +47,17 @@
     }
     checking = false;
     render();
+  }
+
+  // Totaalblok: bij excl. btw subtotaal + btw + totaal incl.; anders totaal incl. met btw-bedrag.
+  function totalsHtml(incl) {
+    const excl = toExcl(incl);
+    const vat = Math.round((incl - excl) * 100) / 100;
+    const row = (a, b, cls) => '<div class="summary-row' + (cls ? " " + cls : "") + '"><span>' + a + "</span><span>" + b + "</span></div>";
+    if (showExcl) {
+      return row("Subtotaal excl. btw", euro(excl)) + row("Btw " + vatRate + "%", euro(vat)) + row("Totaal incl. btw", euro(incl), "summary-total");
+    }
+    return row("Totaal incl. btw", euro(incl), "summary-total") + row("Waarvan btw " + vatRate + "%", euro(vat), "summary-vat");
   }
 
   function captureForm() {
@@ -79,13 +96,13 @@
           '<h3><a href="' + esc(item.url) + '">' + (item.quantity > 1 ? esc(item.quantity) + "× " : "") + esc(item.name) + "</a></h3>" +
           '<p class="cart-period">' + (icons.calendar || "") + esc(period(item)) + "</p>" +
           (lines
-            ? '<ul class="cart-lines">' + lines.map((l) => "<li><span>" + esc(l.label) + "</span><span>" + euro(l.amount) + "</span></li>").join("") + "</ul>"
+            ? '<ul class="cart-lines">' + lines.map((l) => "<li><span>" + esc(l.label) + "</span><span>" + show(l.amount) + "</span></li>").join("") + "</ul>"
             : item.extraLabels && item.extraLabels.length
             ? '<p class="cart-extras">+ ' + item.extraLabels.map(esc).join(", ") + "</p>"
             : "") +
           (ok ? "" : '<p class="cart-error">' + esc(c.error) + " Verwijder dit artikel of kies een andere periode.</p>") +
           "</div>" +
-          '<div class="cart-item-side"><span class="price">' + (ok ? euro(lineTotal) : "—") + "</span>" +
+          '<div class="cart-item-side"><span class="price">' + (ok ? show(lineTotal) : "—") + "</span>" +
           '<button type="button" class="link-btn" data-remove="' + esc(item.key) + '">Verwijderen</button></div>' +
           "</article>"
         );
@@ -113,8 +130,8 @@
       '<div class="field full"><label for="c-notes">Opmerkingen</label><textarea id="c-notes" name="notes" placeholder="Bijv. gewenste tijden of bijzonderheden">' + v("notes") + "</textarea></div>" +
       '<div class="hp" aria-hidden="true"><label>Website <input name="website" tabindex="-1" autocomplete="off"></label></div>' +
       "</div>" +
-      '<div class="summary"><div class="summary-row summary-total"><span>Totaal</span><span>' + euro(total) + "</span></div>" +
-      '<div class="summary-note">' + (deposit ? "Excl. borg van " + euro(deposit) + ". " : "") + "Prijzen incl. btw. Je ontvangt een bevestiging per e-mail; wij bevestigen de beschikbaarheid zo snel mogelijk.</div></div>" +
+      '<div class="summary">' + totalsHtml(total) +
+      '<div class="summary-note">' + (deposit ? "Excl. borg van " + euro(deposit) + ". " : "") + "Je ontvangt een bevestiging per e-mail; wij bevestigen de beschikbaarheid zo snel mogelijk.</div></div>" +
       '<button class="btn btn-primary btn-block" id="checkout-btn" type="submit"' + (problems || checking || busy ? " disabled" : "") + ">" +
       (busy ? "Bezig met versturen…" : "Bestelling plaatsen") + "</button>" +
       (problems ? '<p class="cart-error">Los eerst de melding' + (problems > 1 ? "en" : "") + " bij je artikelen op.</p>" : "") +

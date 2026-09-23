@@ -5,6 +5,11 @@
 
 defined( 'ABSPATH' ) || exit;
 
+/** Bedrag voor e-mails, volgens de btw-weergave van de website. */
+function krv_mail_amount( $incl ) {
+	return krv_euro( krv_display_amount( $incl ) );
+}
+
 /** Tekstuele samenvatting van één boekingsregel (zonder klantgegevens). */
 function krv_booking_item_text( $b ) {
 	$out = array(
@@ -12,9 +17,9 @@ function krv_booking_item_text( $b ) {
 		'Periode: ' . krv_pretty_period( $b['start'], $b['end'] ),
 	);
 	foreach ( (array) $b['lines'] as $l ) {
-		$out[] = '  ' . $l['label'] . ': ' . krv_euro( $l['amount'] );
+		$out[] = '  ' . $l['label'] . ': ' . krv_mail_amount( $l['amount'] );
 	}
-	$out[] = 'Subtotaal: ' . krv_euro( $b['total'] ) . ( $b['deposit'] > 0 ? ' (borg ' . krv_euro( $b['deposit'] ) . ')' : '' );
+	$out[] = 'Subtotaal: ' . krv_mail_amount( $b['total'] ) . ' ' . krv_vat_label() . ( $b['deposit'] > 0 ? ' (borg ' . krv_euro( $b['deposit'] ) . ')' : '' );
 	return implode( "\n", $out );
 }
 
@@ -39,7 +44,11 @@ function krv_order_summary_text( $bookings ) {
 		$total   += (float) $b['total'];
 		$deposit += (float) $b['deposit'];
 	}
-	$txt = implode( "\n\n", $parts ) . "\n\n" . 'Totaal: ' . krv_euro( $total ) . ' (incl. btw)';
+	$vat = krv_vat_breakdown( $total );
+	$txt = implode( "\n\n", $parts ) . "\n\n" .
+		'Totaal excl. btw: ' . krv_euro( $vat['excl'] ) . "\n" .
+		'Btw ' . $vat['rate'] . '%: ' . krv_euro( $vat['vat'] ) . "\n" .
+		'Totaal incl. btw: ' . krv_euro( $vat['incl'] );
 	if ( $deposit > 0 ) {
 		$txt .= "\nBorg totaal: " . krv_euro( $deposit );
 	}
