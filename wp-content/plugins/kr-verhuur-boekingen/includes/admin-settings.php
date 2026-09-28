@@ -26,6 +26,9 @@ add_action(
 			'email'           => sanitize_email( $in['email'] ?? '' ),
 			'notify_email'    => sanitize_email( $in['notify_email'] ?? '' ),
 			'phone'           => sanitize_text_field( $in['phone'] ?? '' ),
+			// Dubbele spaties (bijv. tussen postcode en plaats) blijven behouden.
+			'address_street'  => trim( wp_strip_all_tags( (string) ( $in['address_street'] ?? '' ) ) ),
+			'address_city'    => trim( wp_strip_all_tags( (string) ( $in['address_city'] ?? '' ) ) ),
 			'region'          => sanitize_text_field( $in['region'] ?? '' ),
 			'goboony_url'     => esc_url_raw( $in['goboony_url'] ?? '' ),
 			'min_lead_days'   => max( 0, (int) ( $in['min_lead_days'] ?? 1 ) ),
@@ -112,6 +115,8 @@ function krv_settings_page() {
 				<tr><th><label for="email">E-mailadres</label></th><td><input class="regular-text" type="email" id="email" name="krv[email]" value="<?php echo esc_attr( $s['email'] ); ?>"></td></tr>
 				<tr><th><label for="notify_email">Meldingen nieuwe boekingen naar</label></th><td><input class="regular-text" type="email" id="notify_email" name="krv[notify_email]" value="<?php echo esc_attr( $s['notify_email'] ); ?>"></td></tr>
 				<tr><th><label for="phone">Telefoonnummer</label></th><td><input class="regular-text" id="phone" name="krv[phone]" value="<?php echo esc_attr( $s['phone'] ); ?>"></td></tr>
+				<tr><th><label for="address_street">Adres</label></th><td><input class="regular-text" id="address_street" name="krv[address_street]" value="<?php echo esc_attr( $s['address_street'] ); ?>" placeholder="Straat en huisnummer"></td></tr>
+				<tr><th><label for="address_city">Postcode en plaats</label></th><td><input class="regular-text" id="address_city" name="krv[address_city]" value="<?php echo esc_attr( $s['address_city'] ); ?>" placeholder="1234 AB  Plaats"></td></tr>
 				<tr><th><label for="region">Plaats / werkgebied</label></th><td><input class="regular-text" id="region" name="krv[region]" value="<?php echo esc_attr( $s['region'] ); ?>"></td></tr>
 				<tr><th><label for="goboony_url">Goboony-link camper</label></th><td><input class="regular-text" type="url" id="goboony_url" name="krv[goboony_url]" value="<?php echo esc_attr( $s['goboony_url'] ); ?>"></td></tr>
 			</table>

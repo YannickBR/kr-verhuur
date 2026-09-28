@@ -22,6 +22,8 @@
 				<h4>Contact</h4>
 				<ul>
 					<?php $phone = krt_setting( 'phone' ); $email = krt_setting( 'email', get_option( 'admin_email' ) ); $region = krt_setting( 'region' ); ?>
+					<?php $street = krt_setting( 'address_street' ); $city = krt_setting( 'address_city' ); ?>
+					<?php if ( $street || $city ) : ?><li><?php echo esc_html( $street ); ?><?php echo $street && $city ? '<br>' : ''; ?><?php echo esc_html( $city ); ?></li><?php endif; ?>
 					<?php if ( $phone ) : ?><li><a href="tel:<?php echo esc_attr( preg_replace( '/[^0-9+]/', '', $phone ) ); ?>"><?php echo esc_html( $phone ); ?></a></li><?php endif; ?>
 					<li><a href="mailto:<?php echo esc_attr( $email ); ?>"><?php echo esc_html( $email ); ?></a></li>
 					<?php if ( $region ) : ?><li><?php echo esc_html( $region ); ?></li><?php endif; ?>

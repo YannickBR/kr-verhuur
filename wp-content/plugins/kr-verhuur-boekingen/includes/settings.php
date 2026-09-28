@@ -7,10 +7,12 @@ defined( 'ABSPATH' ) || exit;
 
 function krv_default_settings() {
 	return array(
-		'company_name'    => 'KR Verhuur',
+		'company_name'    => 'KRverhuur',
 		'email'           => get_option( 'admin_email' ),
 		'notify_email'    => get_option( 'admin_email' ),
-		'phone'           => '06 00 00 00 00',
+		'phone'           => '06 168 799 16',
+		'address_street'  => 'Waterpas 2-9',
+		'address_city'    => '8316 GJ  Marknesse',
 		'region'          => '',
 		'goboony_url'     => 'https://www.goboony.nl/',
 		'min_lead_days'   => 1,

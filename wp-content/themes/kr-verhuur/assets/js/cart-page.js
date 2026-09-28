@@ -131,9 +131,10 @@
       '<div class="field full"><label for="c-name">Naam *</label><input id="c-name" name="name" autocomplete="name" required value="' + v("name") + '"></div>' +
       '<div class="field"><label for="c-email">E-mail *</label><input id="c-email" name="email" type="email" autocomplete="email" required value="' + v("email") + '"></div>' +
       '<div class="field"><label for="c-phone">Telefoon *</label><input id="c-phone" name="phone" type="tel" autocomplete="tel" required value="' + v("phone") + '"></div>' +
-      (needsAddress
-        ? '<div class="field full"><label for="c-address">Afleveradres *</label><input id="c-address" name="address" autocomplete="street-address" required placeholder="Straat, huisnummer, postcode en plaats" value="' + v("address") + '"></div>'
-        : "") +
+      '<div class="field full"><label for="c-address">Straat en huisnummer' + (needsAddress ? " *" : "") + "</label>" +
+      '<input id="c-address" name="address" autocomplete="street-address"' + (needsAddress ? " required" : "") + ' placeholder="' + (needsAddress ? "Afleveradres voor halen en brengen" : "Bijv. Dorpsstraat 1") + '" value="' + v("address") + '"></div>' +
+      '<div class="field"><label for="c-postcode">Postcode *</label><input id="c-postcode" name="postcode" autocomplete="postal-code" required placeholder="1234 AB" value="' + v("postcode") + '"></div>' +
+      '<div class="field"><label for="c-city">Woonplaats *</label><input id="c-city" name="city" autocomplete="address-level2" required value="' + v("city") + '"></div>' +
       '<div class="field full"><label for="c-notes">Opmerkingen</label><textarea id="c-notes" name="notes" placeholder="Bijv. gewenste tijden of bijzonderheden">' + v("notes") + "</textarea></div>" +
       '<div class="hp" aria-hidden="true"><label>Website <input name="website" tabindex="-1" autocomplete="off"></label></div>' +
       "</div>" +
@@ -245,6 +246,8 @@
         email: String(fd.get("email") || "").trim(),
         phone: String(fd.get("phone") || "").trim(),
         address: String(fd.get("address") || "").trim(),
+        postcode: String(fd.get("postcode") || "").trim(),
+        city: String(fd.get("city") || "").trim(),
         notes: String(fd.get("notes") || "").trim(),
       },
       website: fd.get("website") || "",

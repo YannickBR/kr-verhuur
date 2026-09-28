@@ -48,7 +48,7 @@ Tip: installeer een SMTP-plugin (bijv. WP Mail SMTP) zodat bevestigingsmails bet
 
 ## E-mails
 
-Alle e-mails zijn HTML-mails in de huisstijl (logo, kleuren, overzicht van de bestelling met btw-opbouw) met een tekstversie voor e-mailprogramma's zonder HTML.
+Alle e-mails zijn HTML-mails in de huisstijl (lettertype Aptos: tekst 12pt, details 10.5pt) (logo, kleuren, overzicht van de bestelling met btw-opbouw) met een tekstversie voor e-mailprogramma's zonder HTML.
 
 - **Bestelling ontvangen** – naar de klant, direct na het bestellen. Tegelijk krijg jij een melding met een knop naar de bestelling in het beheer.
 - **Reservering bevestigd / geannuleerd** – naar de klant als je in de boeking "E-mail klant" aanvinkt. Je kunt dan een **persoonlijk bericht** voor die klant toevoegen; bij een bestelling met meerdere artikelen geldt de status (en de mail) standaard voor de hele bestelling.
@@ -58,7 +58,7 @@ Alle e-mails zijn HTML-mails in de huisstijl (logo, kleuren, overzicht van de be
 
 ## Contactgegevens aanpassen
 
-E-mailadres, telefoonnummer, bedrijfsnaam en werkgebied staan bij **Boekingen → Instellingen → Bedrijf & contact**. Ze worden gebruikt in de header/footer van de website, het contactblok op de homepage en in alle e-mails. Het adres waar meldingen van nieuwe bestellingen heen gaan stel je daar apart in.
+E-mailadres, telefoonnummer, bedrijfsnaam, adres (straat, postcode en plaats) en werkgebied staan bij **Boekingen → Instellingen → Bedrijf & contact**. Ze worden gebruikt in de header/footer van de website, het contactblok op de homepage en in alle e-mails. Het adres waar meldingen van nieuwe bestellingen heen gaan stel je daar apart in.
 
 ## Hoe reserveren werkt (winkelwagen)
 

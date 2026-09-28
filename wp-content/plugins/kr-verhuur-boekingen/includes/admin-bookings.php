@@ -68,6 +68,9 @@ add_action(
 				break;
 			case 'krv_customer':
 				echo esc_html( $b['name'] );
+				if ( $b['city'] ) {
+					echo ' <small style="color:#646970">(' . esc_html( $b['city'] ) . ')</small>';
+				}
 				if ( $b['email'] ) {
 					echo '<br><a href="mailto:' . esc_attr( $b['email'] ) . '">' . esc_html( $b['email'] ) . '</a>';
 				}
@@ -350,7 +353,7 @@ function krv_export_csv( $ids ) {
 	$out = fopen( 'php://output', 'w' );
 	fwrite( $out, "\xEF\xBB\xBF" ); // BOM zodat Excel de tekens goed toont.
 	$extras = krv_extras();
-	fputcsv( $out, array( 'Boeking', 'Bestelling', 'Status', 'Aangevraagd', 'Artikel', 'Aantal', 'Van', 'Tot en met', 'Dagen', 'Extra opties', 'Totaal', 'Borg', 'Betaald', 'Naam', 'E-mail', 'Telefoon', 'Adres', 'Opmerkingen', 'Interne notities', 'Bron' ), ';' );
+	fputcsv( $out, array( 'Boeking', 'Bestelling', 'Status', 'Aangevraagd', 'Artikel', 'Aantal', 'Van', 'Tot en met', 'Dagen', 'Extra opties', 'Totaal', 'Borg', 'Betaald', 'Naam', 'E-mail', 'Telefoon', 'Adres', 'Postcode', 'Woonplaats', 'Opmerkingen', 'Interne notities', 'Bron' ), ';' );
 	foreach ( $ids as $id ) {
 		$b = krv_get_booking( $id );
 		if ( ! $b ) {
@@ -366,7 +369,7 @@ function krv_export_csv( $ids ) {
 				krv_booking_ref( $id ), $b['request_id'], krv_statuses()[ $b['status'] ] ?? $b['status'], get_the_date( 'Y-m-d H:i', $id ),
 				$b['product_name'], $b['quantity'], $b['start'], $b['end'], $b['days'], implode( ', ', $x ),
 				number_format( (float) $b['total'], 2, ',', '' ), number_format( (float) $b['deposit'], 2, ',', '' ), $b['paid'] ? 'ja' : 'nee',
-				$b['name'], $b['email'], $b['phone'], $b['address'], $b['notes'], $b['admin_notes'], $b['source'],
+				$b['name'], $b['email'], $b['phone'], $b['address'], $b['postcode'], $b['city'], $b['notes'], $b['admin_notes'], $b['source'],
 			),
 			';'
 		);
@@ -491,7 +494,9 @@ function krv_booking_details_box( $post ) {
 		<div><label for="krv_name">Naam</label><input type="text" id="krv_name" name="krvb[name]" value="<?php echo esc_attr( $b['name'] ); ?>" required></div>
 		<div><label for="krv_email">E-mail</label><input type="email" id="krv_email" name="krvb[email]" value="<?php echo esc_attr( $b['email'] ); ?>"></div>
 		<div><label for="krv_phone">Telefoon</label><input type="text" id="krv_phone" name="krvb[phone]" value="<?php echo esc_attr( $b['phone'] ); ?>"></div>
-		<div><label for="krv_address">Afleveradres</label><input type="text" id="krv_address" name="krvb[address]" value="<?php echo esc_attr( $b['address'] ); ?>"></div>
+		<div><label for="krv_address">Straat en huisnummer</label><input type="text" id="krv_address" name="krvb[address]" value="<?php echo esc_attr( $b['address'] ); ?>"></div>
+		<div><label for="krv_postcode">Postcode</label><input type="text" id="krv_postcode" name="krvb[postcode]" value="<?php echo esc_attr( $b['postcode'] ); ?>"></div>
+		<div><label for="krv_city">Woonplaats</label><input type="text" id="krv_city" name="krvb[city]" value="<?php echo esc_attr( $b['city'] ); ?>"></div>
 		<div class="full"><label for="krv_notes">Opmerkingen van de klant</label><textarea id="krv_notes" name="krvb[notes]" rows="3"><?php echo esc_textarea( $b['notes'] ); ?></textarea></div>
 		<div class="full"><label for="krv_admin_notes">Interne notities <span style="font-weight:400;color:#646970">(niet zichtbaar voor de klant)</span></label><textarea id="krv_admin_notes" name="krvb[admin_notes]" rows="3"><?php echo esc_textarea( $b['admin_notes'] ); ?></textarea></div>
 	</div>

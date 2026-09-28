@@ -20,6 +20,48 @@ function krv_activate() {
 	flush_rewrite_rules();
 }
 
+/**
+ * Eenmalige update van opgeslagen instellingen bij versie 1.3.0.
+ * Alleen waarden die nog op een voorbeeld- of oude standaardwaarde staan worden aangepast;
+ * zelf ingevulde teksten en gegevens blijven ongemoeid.
+ */
+add_action(
+	'init',
+	function () {
+		if ( version_compare( (string) get_option( 'krv_data_version', '1.0.0' ), '1.3.0', '>=' ) ) {
+			return;
+		}
+		$s = get_option( 'krv_settings', array() );
+		if ( is_array( $s ) && $s ) {
+			if ( empty( $s['phone'] ) || in_array( $s['phone'], array( '06 00 00 00 00', '06 12 34 56 78' ), true ) ) {
+				$s['phone'] = '06 168 799 16';
+			}
+			if ( empty( $s['company_name'] ) || 'KR Verhuur' === $s['company_name'] ) {
+				$s['company_name'] = 'KRverhuur';
+			}
+			if ( empty( $s['address_street'] ) ) {
+				$s['address_street'] = 'Waterpas 2-9';
+			}
+			if ( empty( $s['address_city'] ) ) {
+				$s['address_city'] = '8316 GJ  Marknesse';
+			}
+			update_option( 'krv_settings', $s );
+		}
+		$t = get_option( 'krv_email_texts', array() );
+		if ( is_array( $t ) && $t ) {
+			if ( isset( $t['signature'] ) && "Hartelijke groet,\n{bedrijf}" === str_replace( "\r", '', $t['signature'] ) ) {
+				unset( $t['signature'] );
+			}
+			if ( isset( $t['footer'] ) && 'Vragen? Beantwoord deze e-mail of bel ons op {telefoon}.' === $t['footer'] ) {
+				unset( $t['footer'] );
+			}
+			update_option( 'krv_email_texts', $t );
+		}
+		update_option( 'krv_data_version', '1.3.0' );
+	},
+	5
+);
+
 function krv_seed_groups() {
 	return array(
 		'camper'       => array( 'Camper', 'camper', 'Op avontuur met onze camper – boeken via Goboony.', 'goboony' ),

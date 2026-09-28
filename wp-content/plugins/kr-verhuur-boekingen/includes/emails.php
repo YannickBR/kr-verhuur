@@ -23,8 +23,8 @@ function krv_email_text_defaults() {
 		'cancelled_subject' => 'Je reservering is geannuleerd – {bestelnummer}',
 		'cancelled_heading' => 'Je reservering is geannuleerd',
 		'cancelled_intro'   => "Beste {voornaam},\n\nJammer dat het deze keer niet doorgaat: je reservering is geannuleerd. Wil je een andere datum proberen of heb je vragen? Neem gerust contact met ons op, we denken graag met je mee.",
-		'signature'         => "Hartelijke groet,\n{bedrijf}",
-		'footer'            => 'Vragen? Beantwoord deze e-mail of bel ons op {telefoon}.',
+		'signature'         => "Met vriendelijke groet,\n\nKRverhuur",
+		'footer'            => 'Bij vragen graag antwoorden op deze mail of bel: {telefoon}',
 	);
 }
 
@@ -98,19 +98,33 @@ function krv_email_paragraphs( $text, $style ) {
 	return $out;
 }
 
+/*
+ * Typografie: Aptos (standaardlettertype van Outlook) met terugval op vergelijkbare lettertypes.
+ * Gewone tekst 12pt, kleinere tekst (details, labels, voettekst) 10.5pt.
+ */
+function krv_email_font() {
+	return "font-family:Aptos,'Segoe UI',Calibri,Helvetica,Arial,sans-serif;";
+}
+function krv_email_text_style( $extra = '' ) {
+	return krv_email_font() . 'font-size:12pt;line-height:1.5;color:#0f2530;' . $extra;
+}
+function krv_email_small_style( $extra = '' ) {
+	return krv_email_font() . 'font-size:10.5pt;line-height:1.5;color:#5d7280;' . $extra;
+}
+
 /** Tabel met de gehuurde artikelen. */
 function krv_email_items_html( $bookings ) {
 	$html = '';
 	foreach ( $bookings as $b ) {
-		$html .= '<tr><td style="padding:18px 0;border-top:1px solid #e2e9ed;">' .
-			'<div style="font-size:16px;font-weight:800;color:#002533;">' . esc_html( ( $b['quantity'] > 1 ? $b['quantity'] . '× ' : '' ) . $b['product_name'] ) . '</div>' .
-			'<div style="font-size:14px;color:#3f8469;font-weight:700;margin:4px 0 8px;">&#128197; ' . esc_html( krv_pretty_period( $b['start'], $b['end'] ) ) . '</div>' .
-			'<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="font-size:14px;color:#5d7280;">';
+		$html .= '<tr><td style="padding:16px 0;border-top:1px solid #e2e9ed;">' .
+			'<div style="' . krv_email_text_style( 'font-weight:700;color:#002533;' ) . '">' . esc_html( ( $b['quantity'] > 1 ? $b['quantity'] . '× ' : '' ) . $b['product_name'] ) . '</div>' .
+			'<div style="' . krv_email_small_style( 'color:#3f8469;font-weight:700;margin:2px 0 6px;' ) . '">' . esc_html( krv_pretty_period( $b['start'], $b['end'] ) ) . '</div>' .
+			'<table role="presentation" width="100%" cellpadding="0" cellspacing="0">';
 		foreach ( (array) $b['lines'] as $l ) {
-			$html .= '<tr><td style="padding:2px 0;">' . esc_html( $l['label'] ) . '</td><td align="right" style="padding:2px 0;white-space:nowrap;">' . esc_html( krv_mail_amount( $l['amount'] ) ) . '</td></tr>';
+			$html .= '<tr><td style="' . krv_email_small_style( 'padding:1px 0;' ) . '">' . esc_html( $l['label'] ) . '</td><td align="right" style="' . krv_email_small_style( 'padding:1px 0;white-space:nowrap;' ) . '">' . esc_html( krv_mail_amount( $l['amount'] ) ) . '</td></tr>';
 		}
 		$html .= '</table></td>' .
-			'<td valign="top" align="right" style="padding:18px 0 18px 16px;border-top:1px solid #e2e9ed;font-size:16px;font-weight:800;color:#002533;white-space:nowrap;">' . esc_html( krv_mail_amount( $b['total'] ) ) . '</td></tr>';
+			'<td valign="top" align="right" style="' . krv_email_text_style( 'padding:16px 0 16px 16px;border-top:1px solid #e2e9ed;font-weight:700;color:#002533;white-space:nowrap;' ) . '">' . esc_html( krv_mail_amount( $b['total'] ) ) . '</td></tr>';
 	}
 	return $html;
 }
@@ -121,8 +135,8 @@ function krv_email_totals_html( $bookings ) {
 	$deposit = array_sum( wp_list_pluck( $bookings, 'deposit' ) );
 	$vat     = krv_vat_breakdown( $total );
 	$row     = function ( $label, $value, $strong = false ) {
-		$st = $strong ? 'font-size:18px;font-weight:900;color:#002533;padding-top:10px;' : 'font-size:14px;color:#5d7280;';
-		return '<tr><td style="padding:3px 0;' . $st . '">' . esc_html( $label ) . '</td><td align="right" style="padding:3px 0;white-space:nowrap;' . $st . '">' . esc_html( $value ) . '</td></tr>';
+		$st = $strong ? krv_email_text_style( 'font-weight:700;color:#002533;padding-top:8px;' ) : krv_email_small_style();
+		return '<tr><td style="padding:2px 0;' . $st . '">' . esc_html( $label ) . '</td><td align="right" style="padding:2px 0;white-space:nowrap;' . $st . '">' . esc_html( $value ) . '</td></tr>';
 	};
 	$html  = '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f6f9fa;border-radius:12px;padding:16px 20px;">';
 	$html .= $row( 'Subtotaal excl. btw', krv_euro( $vat['excl'] ) );
@@ -134,19 +148,26 @@ function krv_email_totals_html( $bookings ) {
 	return $html . '</table>';
 }
 
+/** Adres van de klant als tekst: straat, postcode + woonplaats (elk op een eigen regel). */
+function krv_customer_address_text( $b ) {
+	$city = trim( trim( (string) ( $b['postcode'] ?? '' ) ) . '  ' . trim( (string) ( $b['city'] ?? '' ) ) );
+	return trim( implode( "\n", array_filter( array( trim( (string) $b['address'] ), $city ) ) ) );
+}
+
 /** Blok met klantgegevens. */
 function krv_email_customer_html( $b ) {
 	$rows = array(
-		'Naam'     => $b['name'],
-		'E-mail'   => $b['email'],
-		'Telefoon' => $b['phone'],
-		'Adres'    => $b['address'],
+		'Naam'        => $b['name'],
+		'E-mail'      => $b['email'],
+		'Telefoon'    => $b['phone'],
+		'Adres'       => krv_customer_address_text( $b ),
 		'Opmerkingen' => $b['notes'],
 	);
 	$html = '';
 	foreach ( $rows as $label => $value ) {
 		if ( '' !== trim( (string) $value ) ) {
-			$html .= '<tr><td style="padding:3px 16px 3px 0;color:#5d7280;font-size:14px;vertical-align:top;white-space:nowrap;">' . esc_html( $label ) . '</td><td style="padding:3px 0;font-size:14px;color:#0f2530;">' . nl2br( esc_html( $value ) ) . '</td></tr>';
+			$html .= '<tr><td style="' . krv_email_small_style( 'padding:2px 16px 2px 0;vertical-align:top;white-space:nowrap;' ) . '">' . esc_html( $label ) . '</td>' .
+				'<td style="' . krv_email_small_style( 'padding:2px 0;color:#0f2530;' ) . '">' . nl2br( str_replace( '  ', '&nbsp; ', esc_html( $value ) ) ) . '</td></tr>';
 		}
 	}
 	return '<table role="presentation" cellpadding="0" cellspacing="0">' . $html . '</table>';
@@ -183,7 +204,11 @@ function krv_render_email( $a ) {
 	$company = krv_setting( 'company_name' );
 	$phone   = krv_setting( 'phone' );
 	$email   = krv_setting( 'email' );
-	$p_style = 'margin:0 0 14px;font-size:16px;line-height:1.6;color:#0f2530;';
+	$street  = krv_setting( 'address_street' );
+	$city    = krv_setting( 'address_city' );
+	$p_style = krv_email_text_style( 'margin:0 0 12pt;' );
+	$label   = krv_email_small_style( 'font-weight:700;color:#002533;' );
+	$foot    = krv_email_font() . 'font-size:10.5pt;line-height:1.5;color:#dff1fb;';
 
 	ob_start();
 	?>
@@ -195,7 +220,7 @@ function krv_render_email( $a ) {
 <meta name="color-scheme" content="light">
 <title><?php echo esc_html( $company ); ?></title>
 </head>
-<body style="margin:0;padding:0;background:#eef3f5;font-family:'Nunito','Segoe UI',Helvetica,Arial,sans-serif;">
+<body style="margin:0;padding:0;background:#eef3f5;<?php echo esc_attr( krv_email_font() ); ?>">
 <div style="display:none;max-height:0;overflow:hidden;opacity:0;"><?php echo esc_html( $a['preheader'] ); ?></div>
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#eef3f5;">
 <tr><td align="center" style="padding:28px 12px;">
@@ -205,15 +230,15 @@ function krv_render_email( $a ) {
 			<a href="<?php echo esc_url( home_url( '/' ) ); ?>"><img src="<?php echo esc_url( krv_email_logo_url() ); ?>" width="200" alt="<?php echo esc_attr( $company ); ?>" style="display:block;border:0;width:200px;max-width:60%;height:auto;"></a>
 		</td></tr>
 		<tr><td style="padding:20px 32px 4px;">
-			<h1 style="margin:0 0 16px;font-size:26px;line-height:1.25;font-weight:900;color:#002533;"><?php echo esc_html( $a['heading'] ); ?></h1>
+			<p style="<?php echo esc_attr( $p_style ); ?>"><?php echo esc_html( $a['heading'] ); ?></p>
 			<?php echo krv_email_paragraphs( $a['intro'], $p_style ); // phpcs:ignore WordPress.Security.EscapeOutput ?>
 		</td></tr>
 		<?php if ( '' !== trim( (string) $a['personal'] ) ) : ?>
 		<tr><td style="padding:4px 32px 12px;">
 			<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#e6f3ed;border-left:4px solid #519f81;border-radius:10px;">
 				<tr><td style="padding:16px 20px;">
-					<div style="font-size:12px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:#3f8469;margin-bottom:6px;">Persoonlijk bericht</div>
-					<?php echo krv_email_paragraphs( $a['personal'], 'margin:0 0 8px;font-size:15px;line-height:1.6;color:#0f2530;' ); // phpcs:ignore WordPress.Security.EscapeOutput ?>
+					<div style="<?php echo esc_attr( krv_email_small_style( 'font-weight:700;color:#3f8469;margin-bottom:4px;' ) ); ?>">Persoonlijk bericht</div>
+					<?php echo krv_email_paragraphs( $a['personal'], krv_email_text_style( 'margin:0 0 6pt;' ) ); // phpcs:ignore WordPress.Security.EscapeOutput ?>
 				</td></tr>
 			</table>
 		</td></tr>
@@ -221,8 +246,8 @@ function krv_render_email( $a ) {
 		<?php if ( $a['bookings'] ) : ?>
 		<tr><td style="padding:16px 32px 0;">
 			<table role="presentation" width="100%" cellpadding="0" cellspacing="0">
-				<tr><td style="font-size:12px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:#5d7280;padding-bottom:4px;"><?php echo $a['for_admin'] ? 'Bestelling' : 'Je bestelling'; ?></td>
-					<td align="right" style="font-size:13px;font-weight:800;color:#002533;padding-bottom:4px;"><?php echo esc_html( $a['request_id'] ); ?></td></tr>
+				<tr><td style="<?php echo esc_attr( $label ); ?>padding-bottom:4px;"><?php echo $a['for_admin'] ? 'Bestelling' : 'Je bestelling'; ?></td>
+					<td align="right" style="<?php echo esc_attr( $label ); ?>padding-bottom:4px;"><?php echo esc_html( $a['request_id'] ); ?></td></tr>
 				<?php echo krv_email_items_html( $a['bookings'] ); // phpcs:ignore WordPress.Security.EscapeOutput ?>
 			</table>
 		</td></tr>
@@ -230,26 +255,30 @@ function krv_render_email( $a ) {
 		<?php endif; ?>
 		<?php if ( $a['show_customer'] && $a['bookings'] ) : ?>
 		<tr><td style="padding:18px 32px 0;">
-			<div style="font-size:12px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:#5d7280;margin-bottom:8px;"><?php echo $a['for_admin'] ? 'Klantgegevens' : 'Je gegevens'; ?></div>
+			<div style="<?php echo esc_attr( $label ); ?>margin-bottom:6px;"><?php echo $a['for_admin'] ? 'Klantgegevens' : 'Je gegevens'; ?></div>
 			<?php echo krv_email_customer_html( $a['bookings'][0] ); // phpcs:ignore WordPress.Security.EscapeOutput ?>
 		</td></tr>
 		<?php endif; ?>
 		<?php if ( $a['button_url'] ) : ?>
 		<tr><td style="padding:24px 32px 28px;">
-			<a href="<?php echo esc_url( $a['button_url'] ); ?>" style="display:inline-block;background:#519f81;color:#ffffff;text-decoration:none;font-weight:800;font-size:15px;padding:13px 26px;border-radius:999px;"><?php echo esc_html( $a['button_label'] ); ?></a>
+			<a href="<?php echo esc_url( $a['button_url'] ); ?>" style="display:inline-block;background:#519f81;color:#ffffff;text-decoration:none;font-weight:700;<?php echo esc_attr( krv_email_font() ); ?>font-size:12pt;padding:12px 24px;border-radius:999px;"><?php echo esc_html( $a['button_label'] ); ?></a>
 		</td></tr>
 		<?php endif; ?>
 		<?php if ( '' !== trim( (string) $a['signature'] ) ) : ?>
 		<tr><td style="padding:26px 32px 4px;"><?php echo krv_email_paragraphs( $a['signature'], $p_style ); // phpcs:ignore WordPress.Security.EscapeOutput ?></td></tr>
 		<?php endif; ?>
-		<tr><td style="padding:22px 32px;background:#002533;color:#dff1fb;font-size:13px;line-height:1.6;">
+		<tr><td style="padding:22px 32px;background:#002533;<?php echo esc_attr( $foot ); ?>">
 			<?php if ( '' !== trim( (string) $a['footer'] ) ) : ?>
-				<div style="margin-bottom:8px;"><?php echo esc_html( $a['footer'] ); ?></div>
+				<div style="<?php echo esc_attr( $foot ); ?>margin-bottom:12px;"><?php echo esc_html( $a['footer'] ); ?></div>
 			<?php endif; ?>
-			<strong style="color:#ffffff;"><?php echo esc_html( $company ); ?></strong>
-			<?php if ( $phone ) : ?> · <a href="tel:<?php echo esc_attr( preg_replace( '/[^0-9+]/', '', $phone ) ); ?>" style="color:#dff1fb;"><?php echo esc_html( $phone ); ?></a><?php endif; ?>
-			<?php if ( $email ) : ?> · <a href="mailto:<?php echo esc_attr( $email ); ?>" style="color:#dff1fb;"><?php echo esc_html( $email ); ?></a><?php endif; ?>
-			<br><a href="<?php echo esc_url( home_url( '/' ) ); ?>" style="color:#519f81;font-weight:700;"><?php echo esc_html( preg_replace( '#^https?://#', '', untrailingslashit( home_url() ) ) ); ?></a>
+			<div style="<?php echo esc_attr( $foot ); ?>">
+				<strong style="color:#ffffff;"><?php echo esc_html( $company ); ?></strong><br>
+				<?php if ( $street ) : ?><?php echo esc_html( $street ); ?><br><?php endif; ?>
+				<?php if ( $city ) : ?><?php echo str_replace( '  ', '&nbsp; ', esc_html( $city ) ); // phpcs:ignore WordPress.Security.EscapeOutput ?><br><?php endif; ?>
+				<?php if ( $phone ) : ?><a href="tel:<?php echo esc_attr( preg_replace( '/[^0-9+]/', '', $phone ) ); ?>" style="color:#dff1fb;text-decoration:none;"><?php echo esc_html( $phone ); ?></a><br><?php endif; ?>
+				<?php if ( $email ) : ?><a href="mailto:<?php echo esc_attr( $email ); ?>" style="color:#dff1fb;text-decoration:none;"><?php echo esc_html( $email ); ?></a><br><?php endif; ?>
+				<a href="<?php echo esc_url( home_url( '/' ) ); ?>" style="color:#519f81;font-weight:700;text-decoration:none;"><?php echo esc_html( preg_replace( '#^https?://(www\.)?#', '', untrailingslashit( home_url() ) ) ); ?></a>
+			</div>
 		</td></tr>
 	</table>
 </td></tr>
@@ -289,8 +318,9 @@ function krv_order_summary_text( $bookings ) {
 	}
 	$b    = $bookings[0];
 	$txt .= "\n\nNaam: " . $b['name'] . "\nE-mail: " . $b['email'] . "\nTelefoon: " . $b['phone'];
-	if ( $b['address'] ) {
-		$txt .= "\nAdres: " . $b['address'];
+	$address = krv_customer_address_text( $b );
+	if ( $address ) {
+		$txt .= "\nAdres: " . str_replace( "\n", ', ', $address );
 	}
 	if ( $b['notes'] ) {
 		$txt .= "\nOpmerkingen: " . $b['notes'];
@@ -312,7 +342,20 @@ function krv_email_text_version( $a ) {
 	if ( ! empty( $a['signature'] ) ) {
 		$txt .= "\n\n" . trim( $a['signature'] );
 	}
-	return $txt . "\n\n" . krv_setting( 'company_name' ) . ' · ' . krv_setting( 'phone' ) . ' · ' . krv_setting( 'email' );
+	if ( ! empty( $a['footer'] ) ) {
+		$txt .= "\n\n" . trim( $a['footer'] );
+	}
+	$contact = array_filter(
+		array(
+			krv_setting( 'company_name' ),
+			krv_setting( 'address_street' ),
+			krv_setting( 'address_city' ),
+			krv_setting( 'phone' ),
+			krv_setting( 'email' ),
+			preg_replace( '#^https?://(www\.)?#', '', untrailingslashit( home_url() ) ),
+		)
+	);
+	return $txt . "\n\n" . implode( "\n", $contact );
 }
 
 /* ===========================================================================
@@ -326,7 +369,7 @@ function krv_email_text_version( $a ) {
  */
 function krv_send_email( $to, $subject, $a, $reply_to = '' ) {
 	$html = krv_render_email( $a );
-	$text = krv_email_text_version( wp_parse_args( $a, array( 'personal' => '', 'bookings' => array(), 'button_url' => '', 'signature' => '' ) ) );
+	$text = krv_email_text_version( wp_parse_args( $a, array( 'personal' => '', 'bookings' => array(), 'button_url' => '', 'signature' => '', 'footer' => '' ) ) );
 
 	$set_alt = function ( $phpmailer ) use ( $text ) {
 		$phpmailer->AltBody = $text; // phpcs:ignore WordPress.NamingConventions.ValidVariableName
@@ -442,7 +485,7 @@ function krv_email_sample_bookings() {
 			array(
 				'id' => 0, 'product_name' => 'Photobooth Classic', 'quantity' => 1, 'start' => $start, 'end' => $end, 'total' => 389, 'deposit' => 150,
 				'lines' => array( array( 'label' => 'Huur 2 dagen', 'amount' => 374 ), array( 'label' => 'Props & accessoires', 'amount' => 15 ) ),
-				'name' => 'Sanne de Vries', 'email' => 'sanne@example.com', 'phone' => '06 12 34 56 78', 'address' => 'Dorpsstraat 1, Ergens', 'notes' => 'Graag voor 10:00 bezorgen.',
+				'name' => 'Sanne de Vries', 'email' => 'sanne@example.com', 'phone' => '06 12 34 56 78', 'address' => 'Dorpsstraat 1', 'postcode' => '8316 AB', 'city' => 'Marknesse', 'notes' => 'Graag voor 10:00 bezorgen.',
 			),
 		),
 		'KR-00042',

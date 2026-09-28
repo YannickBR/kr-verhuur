@@ -25,6 +25,8 @@ function krv_booking_fields() {
 		'email'       => '',
 		'phone'       => '',
 		'address'     => '',
+		'postcode'    => '',
+		'city'        => '',
 		'notes'       => '',
 		'admin_notes' => '',
 		'request_id'  => '',
@@ -97,8 +99,10 @@ function krv_validate_booking( $in, $opts = array() ) {
 		'name'    => sanitize_text_field( isset( $in['name'] ) ? $in['name'] : '' ),
 		'email'   => sanitize_email( isset( $in['email'] ) ? $in['email'] : '' ),
 		'phone'   => sanitize_text_field( isset( $in['phone'] ) ? $in['phone'] : '' ),
-		'address' => sanitize_textarea_field( isset( $in['address'] ) ? $in['address'] : '' ),
-		'notes'   => sanitize_textarea_field( isset( $in['notes'] ) ? $in['notes'] : '' ),
+		'address'  => sanitize_textarea_field( isset( $in['address'] ) ? $in['address'] : '' ),
+		'postcode' => strtoupper( sanitize_text_field( isset( $in['postcode'] ) ? $in['postcode'] : '' ) ),
+		'city'     => sanitize_text_field( isset( $in['city'] ) ? $in['city'] : '' ),
+		'notes'    => sanitize_textarea_field( isset( $in['notes'] ) ? $in['notes'] : '' ),
 	);
 	if ( '' === $customer['name'] && ! $opts['skip_customer'] ) {
 		return new WP_Error( 'krv_customer', 'Vul je naam in.' );
@@ -110,10 +114,13 @@ function krv_validate_booking( $in, $opts = array() ) {
 		if ( '' === $customer['phone'] ) {
 			return new WP_Error( 'krv_customer', 'Vul je telefoonnummer in.' );
 		}
+		if ( '' === $customer['postcode'] || '' === $customer['city'] ) {
+			return new WP_Error( 'krv_customer', 'Vul je postcode en woonplaats in.' );
+		}
 		$all = krv_extras();
 		foreach ( $extras as $x ) {
 			if ( ! empty( $all[ $x ]['needs_address'] ) && '' === $customer['address'] ) {
-				return new WP_Error( 'krv_customer', 'Vul het afleveradres in.' );
+				return new WP_Error( 'krv_customer', 'Vul je straat en huisnummer in (nodig voor halen en brengen).' );
 			}
 		}
 	}
@@ -158,7 +165,7 @@ function krv_save_booking_data( $id, $data ) {
 		array(
 			'ID'           => $id,
 			'post_title'   => krv_booking_ref( $id ) . ' – ' . $b['name'] . ' – ' . $b['product_name'],
-			'post_content' => implode( "\n", array( $b['request_id'], $b['email'], $b['phone'], $b['address'], $b['notes'] ) ),
+			'post_content' => implode( "\n", array( $b['request_id'], $b['email'], $b['phone'], $b['address'], $b['postcode'], $b['city'], $b['notes'] ) ),
 			'post_status'  => 'publish',
 		)
 	);
