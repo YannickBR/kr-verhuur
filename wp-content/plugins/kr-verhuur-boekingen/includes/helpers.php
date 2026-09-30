@@ -54,6 +54,10 @@ function krv_pretty_date( $date ) {
 
 /** Periode leesbaar, bijv. "26 sep t/m 29 sep 2026 (4 dagen)". */
 function krv_pretty_period( $start, $end ) {
+	if ( ! krv_valid_date( (string) $start ) ) {
+		return 'Verkoop (geen huurperiode)';
+	}
+	$end  = krv_valid_date( (string) $end ) ? $end : $start;
 	$days = krv_days_between( $start, $end );
 	$txt  = krv_pretty_date( $start );
 	if ( $days > 1 ) {

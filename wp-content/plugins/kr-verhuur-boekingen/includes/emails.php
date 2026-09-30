@@ -278,6 +278,9 @@ function krv_render_email( $a ) {
 				<?php if ( $phone ) : ?><a href="tel:<?php echo esc_attr( preg_replace( '/[^0-9+]/', '', $phone ) ); ?>" style="color:#dff1fb;text-decoration:none;"><?php echo esc_html( $phone ); ?></a><br><?php endif; ?>
 				<?php if ( $email ) : ?><a href="mailto:<?php echo esc_attr( $email ); ?>" style="color:#dff1fb;text-decoration:none;"><?php echo esc_html( $email ); ?></a><br><?php endif; ?>
 				<a href="<?php echo esc_url( home_url( '/' ) ); ?>" style="color:#519f81;font-weight:700;text-decoration:none;"><?php echo esc_html( preg_replace( '#^https?://(www\.)?#', '', untrailingslashit( home_url() ) ) ); ?></a>
+				<?php if ( krv_terms_url() ) : ?>
+					<br><a href="<?php echo esc_url( krv_terms_url() ); ?>" style="color:#dff1fb;">Algemene voorwaarden</a>
+				<?php endif; ?>
 			</div>
 		</td></tr>
 	</table>
@@ -296,7 +299,7 @@ function krv_render_email( $a ) {
 function krv_booking_item_text( $b ) {
 	$out = array(
 		$b['product_name'] . ( $b['quantity'] > 1 ? ' (' . $b['quantity'] . '×)' : '' ),
-		'Periode: ' . krv_pretty_period( $b['start'], $b['end'] ),
+		( $b['start'] ? 'Periode: ' : '' ) . krv_pretty_period( $b['start'], $b['end'] ),
 	);
 	foreach ( (array) $b['lines'] as $l ) {
 		$out[] = '  ' . $l['label'] . ': ' . krv_mail_amount( $l['amount'] );

@@ -32,7 +32,7 @@ Tip: installeer een SMTP-plugin (bijv. WP Mail SMTP) zodat bevestigingsmails bet
 - **Planning** – maandoverzicht van alle artikelen × dagen, met kleur per status.
 - Dashboard-widget met openstaande aanvragen en de verhuur van de komende 7 dagen; een teller in het menu toont nieuwe aanvragen.
 
-**Huurartikelen** – per artikel: prijs eerste dag, prijs per extra dag, borg, max. aantal dagen, voorraad, of de klant een aantal mag kiezen, kenmerken en welke extra opties beschikbaar zijn.
+**Huurartikelen** (klassieke editor, alles op één scherm) – per artikel: soort (*Verhuur* per dag met kalender, of *Verkoop* per stuk/zak zonder kalender), foto's (uitgelichte afbeelding + extra foto's voor de fotoslider, sleepbaar), weergave van foto's (hele foto tonen of kader vullen), een optionele externe boekingslink (bijv. de camper via Goboony) en prijs eerste dag, prijs per extra dag, borg, max. aantal dagen, voorraad, of de klant een aantal mag kiezen, kenmerken en welke extra opties beschikbaar zijn.
 
 **Huurartikelen → Huurgroepen** – icoon, korte omschrijving, volgorde en optioneel een externe link (de camper linkt zo direct naar Goboony).
 
@@ -74,6 +74,14 @@ De server controleert altijd opnieuw de prijs, beschikbaarheid, datums en verpli
 
 - Online betalen (bijv. Mollie of WooCommerce) kan aan een bestelling gekoppeld worden via de hooks `krv_request_created` (nieuwe bestelling, met bestelnummer en boekings-ID's) en `krv_booking_status_changed`.
 - De winkelwagen staat in de browser van de bezoeker (localStorage); de server controleert bij het bestellen altijd opnieuw prijs en beschikbaarheid.
+
+## Teksten op de website
+
+Homepage-titel, introductietekst en de tekst in de footer ("Huur alles voor je feest…") pas je aan via **Weergave → Customizer → Teksten website**.
+
+## Algemene voorwaarden
+
+Er is een **concept**pagina *Algemene voorwaarden* aangemaakt (Pagina's). Controleer en vul de tekst aan (met name de gegevens tussen [haken]) en publiceer de pagina. Zodra die gepubliceerd is, moet de klant bij het bestellen een vinkje zetten, staat de link in de footer en in de e-mails, en wordt het akkoord per boeking vastgelegd. Welke pagina gebruikt wordt stel je in bij **Boekingen → Instellingen → Reserveren**.
 
 ## Logo
 

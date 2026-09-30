@@ -69,14 +69,26 @@ function krv_validate_booking( $in, $opts = array() ) {
 		return new WP_Error( 'krv_product', 'Kies een geldig huurartikel.' );
 	}
 
+	if ( $public && $product['external_url'] ) {
+		return new WP_Error( 'krv_product', sprintf( '%s boek je via de externe website.', $product['name'] ) );
+	}
+
 	$start = isset( $in['start'] ) ? sanitize_text_field( $in['start'] ) : '';
 	$end   = ! empty( $in['end'] ) ? sanitize_text_field( $in['end'] ) : $start;
-	if ( ! krv_valid_date( $start ) || ! krv_valid_date( $end ) || $end < $start ) {
-		return new WP_Error( 'krv_dates', 'Kies een geldige huurperiode.' );
+	$sale  = $product['is_sale'];
+	if ( $sale ) {
+		// Verkoopartikelen hebben geen huurperiode.
+		$start = '';
+		$end   = '';
+		$days  = 1;
+	} else {
+		if ( ! krv_valid_date( $start ) || ! krv_valid_date( $end ) || $end < $start ) {
+			return new WP_Error( 'krv_dates', 'Kies een geldige huurperiode.' );
+		}
+		$days = krv_days_between( $start, $end );
 	}
-	$days = krv_days_between( $start, $end );
 
-	if ( $public ) {
+	if ( $public && ! $sale ) {
 		$min = wp_date( 'Y-m-d', strtotime( '+' . (int) krv_setting( 'min_lead_days' ) . ' days' ) );
 		$max = wp_date( 'Y-m-d', strtotime( '+' . (int) krv_setting( 'max_days_ahead' ) . ' days' ) );
 		if ( $start < $min || $end > $max ) {
@@ -125,7 +137,12 @@ function krv_validate_booking( $in, $opts = array() ) {
 		}
 	}
 
-	if ( ! $opts['force'] ) {
+	if ( $sale ) {
+		// Verkoop: geen agenda, alleen een maximum per bestelling.
+		if ( $public && $quantity > $product['stock'] ) {
+			return new WP_Error( 'krv_stock', sprintf( 'Je kunt maximaal %d %s per bestelling bestellen. Neem contact op voor grotere aantallen.', $product['stock'], $product['unit'] ) );
+		}
+	} elseif ( ! $opts['force'] ) {
 		$ok = krv_check_available( $product['id'], $start, $end, $quantity, $opts['exclude_id'], $opts['pending'] );
 		if ( is_wp_error( $ok ) ) {
 			return $ok;

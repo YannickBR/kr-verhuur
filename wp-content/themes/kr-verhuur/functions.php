@@ -39,6 +39,68 @@ add_action(
 	}
 );
 
+/* ---------------------------------------------------------------------------
+ * Teksten aanpassen via Weergave → Customizer → Teksten website
+ * ------------------------------------------------------------------------- */
+
+/** Standaardteksten (gebruikt zolang er in de Customizer niets is ingevuld). */
+function krt_text_defaults() {
+	return array(
+		'footer_text'    => 'Huur alles voor je feest, evenement of klus. Eenvoudig online reserveren, wij regelen de rest.',
+		'hero_eyebrow'   => 'Verhuur voor feest, evenement & klus',
+		'hero_title'     => 'Voor als je het zelf niet hebt!',
+		'hero_highlight' => 'zelf',
+		'hero_lead'      => 'Van photobooth tot trilplaat: bij KR Verhuur huur je het eenvoudig voor één of meerdere dagen. Kies je datum in de kalender en reserveer direct online.',
+	);
+}
+
+function krt_text( $key ) {
+	$defaults = krt_text_defaults();
+	$value    = get_theme_mod( 'krt_' . $key, '' );
+	return '' !== trim( (string) $value ) ? $value : ( isset( $defaults[ $key ] ) ? $defaults[ $key ] : '' );
+}
+
+add_action(
+	'customize_register',
+	function ( $wp_customize ) {
+		$wp_customize->add_section(
+			'krt_texts',
+			array(
+				'title'       => 'Teksten website',
+				'priority'    => 30,
+				'description' => 'Pas hier de vaste teksten van de website aan. Laat een veld leeg voor de standaardtekst.',
+			)
+		);
+		$fields = array(
+			'hero_eyebrow'   => array( 'Homepage: kleine regel boven de titel', 'text' ),
+			'hero_title'     => array( 'Homepage: titel', 'text' ),
+			'hero_highlight' => array( 'Homepage: woord in de titel dat groen wordt', 'text' ),
+			'hero_lead'      => array( 'Homepage: introductietekst', 'textarea' ),
+			'footer_text'    => array( 'Footer: tekst onder het logo', 'textarea' ),
+		);
+		$defaults = krt_text_defaults();
+		foreach ( $fields as $key => $f ) {
+			$wp_customize->add_setting(
+				'krt_' . $key,
+				array(
+					'default'           => '',
+					'sanitize_callback' => 'sanitize_textarea_field',
+					'transport'         => 'refresh',
+				)
+			);
+			$wp_customize->add_control(
+				'krt_' . $key,
+				array(
+					'label'       => $f[0],
+					'section'     => 'krt_texts',
+					'type'        => $f[1],
+					'input_attrs' => array( 'placeholder' => $defaults[ $key ] ),
+				)
+			);
+		}
+	}
+);
+
 /** Is de boekingen-plugin actief? */
 function krt_has_plugin() {
 	return function_exists( 'krv_get_product' );
@@ -84,12 +146,17 @@ add_action(
 					'minLead'    => (int) krv_setting( 'min_lead_days' ),
 					'maxAhead'   => (int) krv_setting( 'max_days_ahead' ),
 					'icons'      => krt_icons_for_js(),
+					'termsUrl'   => krv_terms_url(),
 				)
 			);
 		}
 
 		if ( is_singular( 'kr_product' ) ) {
 			$p = krv_get_product( get_queried_object_id() );
+			wp_enqueue_script( 'krt-gallery', $uri . '/assets/js/gallery.js', array(), krt_asset_ver( '/assets/js/gallery.js' ), true );
+			if ( $p['external_url'] ) {
+				return; // Boeken gaat via de externe website: geen kalender nodig.
+			}
 			wp_enqueue_script( 'krt-calendar', $uri . '/assets/js/calendar.js', array(), krt_asset_ver( '/assets/js/calendar.js' ), true );
 			wp_enqueue_script( 'krt-booking', $uri . '/assets/js/booking.js', array( 'krt-calendar', 'krt-cart' ), krt_asset_ver( '/assets/js/booking.js' ), true );
 
@@ -117,7 +184,9 @@ add_action(
 						'name'           => $p['name'],
 						'priceDay'       => krv_entered_to_incl( $p['price_day'] ),
 						'priceExtraDay'  => krv_entered_to_incl( $p['price_extra_day'] ),
-						'deposit'        => $p['deposit'],
+						'deposit'        => $p['is_sale'] ? 0 : $p['deposit'],
+						'isSale'         => $p['is_sale'] ? 1 : 0,
+						'unit'           => $p['unit'],
 						'maxDays'        => $p['max_days'],
 						'stock'          => $p['stock'],
 						'allowQuantity'  => $p['allow_quantity'],

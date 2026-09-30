@@ -91,6 +91,12 @@ function krv_product_fields() {
 		'allow_quantity'  => 0,
 		'features'        => '',
 		'extras'          => array(),
+		'mode'            => 'rent',   // 'rent' = verhuur per dag, 'sale' = verkoop per stuk.
+		'unit'            => 'stuk',   // Eenheid bij verkoop, bijv. "stuk" of "zak".
+		'external_url'    => '',       // Boeken via een externe site (bijv. Goboony) i.p.v. de kalender.
+		'external_label'  => '',
+		'image_fit'       => 'contain', // 'contain' = hele foto tonen, 'cover' = kader vullen.
+		'gallery'         => array(),  // Extra foto's (bijlage-ID's).
 	);
 }
 
@@ -115,9 +121,47 @@ function krv_get_product( $post ) {
 	$data['allow_quantity']  = (bool) $data['allow_quantity'];
 	$data['extras']          = array_values( array_intersect( (array) $data['extras'], array_keys( krv_extras() ) ) );
 	$data['features']        = array_values( array_filter( array_map( 'trim', explode( "\n", (string) $data['features'] ) ) ) );
+	$data['mode']            = 'sale' === $data['mode'] ? 'sale' : 'rent';
+	$data['is_sale']         = 'sale' === $data['mode'];
+	$data['unit']            = '' !== trim( (string) $data['unit'] ) ? trim( (string) $data['unit'] ) : 'stuk';
+	$data['external_url']    = esc_url_raw( (string) $data['external_url'] );
+	$data['external_label']  = '' !== trim( (string) $data['external_label'] ) ? trim( (string) $data['external_label'] ) : krv_external_label_default( $data['external_url'] );
+	$data['image_fit']       = 'cover' === $data['image_fit'] ? 'cover' : 'contain';
+	$data['gallery']         = array_values( array_filter( array_map( 'intval', (array) $data['gallery'] ) ) );
+	if ( $data['is_sale'] ) {
+		$data['allow_quantity'] = true; // Bij verkoop kiest de klant altijd een aantal.
+	}
 	$terms                   = get_the_terms( $post, 'kr_group' );
 	$data['group']           = ( $terms && ! is_wp_error( $terms ) ) ? $terms[0] : null;
 	return $data;
+}
+
+/** Standaard knoptekst voor een externe boekingslink, bijv. "Boek via Goboony". */
+function krv_external_label_default( $url ) {
+	$host = preg_replace( '/^www\./', '', (string) wp_parse_url( $url, PHP_URL_HOST ) );
+	$name = $host ? ucfirst( strtok( $host, '.' ) ) : '';
+	return $name ? 'Boek via ' . $name : 'Boeken';
+}
+
+/** Alle foto's van een artikel: uitgelichte afbeelding + galerij (zonder dubbelen). */
+function krv_product_images( $post_id ) {
+	$ids   = array();
+	$thumb = (int) get_post_thumbnail_id( $post_id );
+	if ( $thumb ) {
+		$ids[] = $thumb;
+	}
+	$p = krv_get_product( $post_id );
+	foreach ( $p ? $p['gallery'] : array() as $id ) {
+		if ( ! in_array( $id, $ids, true ) && wp_attachment_is_image( $id ) ) {
+			$ids[] = $id;
+		}
+	}
+	return $ids;
+}
+
+/** Prijs-eenheid voor weergave: "dag" bij verhuur, bijv. "stuk" of "zak" bij verkoop. */
+function krv_price_unit( $p ) {
+	return $p['is_sale'] ? $p['unit'] : 'dag';
 }
 
 /* ---------------------------------------------------------------------------

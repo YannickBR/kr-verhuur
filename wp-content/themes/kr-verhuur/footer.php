@@ -5,7 +5,7 @@
 		<div class="footer-grid">
 			<div class="footer-brand">
 				<?php echo krt_logo( 'light' ); // phpcs:ignore ?>
-				<p>Huur alles voor je feest, evenement of klus. Eenvoudig online reserveren, wij regelen de rest.</p>
+				<p><?php echo nl2br( esc_html( krt_text( 'footer_text' ) ) ); ?></p>
 			</div>
 			<div>
 				<h4>Huurgroepen</h4>
@@ -43,7 +43,11 @@
 		</div>
 		<div class="footer-bottom">
 			<span>&copy; <?php echo esc_html( wp_date( 'Y' ) . ' ' . krt_setting( 'company_name', get_bloginfo( 'name' ) ) ); ?></span>
-			<span>Alle prijzen <?php echo krt_vat_label(); // phpcs:ignore ?></span>
+			<span>
+				<?php $terms = function_exists( 'krv_terms_url' ) ? krv_terms_url() : ''; ?>
+				<?php if ( $terms ) : ?><a href="<?php echo esc_url( $terms ); ?>">Algemene voorwaarden</a> · <?php endif; ?>
+				Alle prijzen <?php echo krt_vat_label(); // phpcs:ignore ?>
+			</span>
 		</div>
 	</div>
 </footer>

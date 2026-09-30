@@ -11,9 +11,17 @@ $region = krt_setting( 'region' );
 ?>
 <section class="hero">
 	<div class="container">
-		<span class="eyebrow eyebrow-light">Verhuur voor feest, evenement &amp; klus</span>
-		<h1>Voor als je het <span>zelf</span> niet hebt!</h1>
-		<p class="lead">Van photobooth tot trilplaat: bij KR Verhuur huur je het eenvoudig voor één of meerdere dagen. Kies je datum in de kalender en reserveer direct online.</p>
+		<?php
+		// Teksten zijn aan te passen via Weergave → Customizer → Teksten website.
+		$title     = esc_html( krt_text( 'hero_title' ) );
+		$highlight = esc_html( trim( krt_text( 'hero_highlight' ) ) );
+		if ( '' !== $highlight && false !== strpos( $title, $highlight ) ) {
+			$title = preg_replace( '/' . preg_quote( $highlight, '/' ) . '/', '<span>' . $highlight . '</span>', $title, 1 );
+		}
+		?>
+		<span class="eyebrow eyebrow-light"><?php echo esc_html( krt_text( 'hero_eyebrow' ) ); ?></span>
+		<h1><?php echo $title; // phpcs:ignore WordPress.Security.EscapeOutput -- al ge-escaped hierboven ?></h1>
+		<p class="lead"><?php echo esc_html( krt_text( 'hero_lead' ) ); ?></p>
 		<div class="hero-actions">
 			<a class="btn btn-primary" href="<?php echo esc_url( krt_catalog_url() ); ?>">Bekijk het assortiment</a>
 			<a class="btn btn-ghost" href="#hoe-werkt-het">Hoe werkt het?</a>

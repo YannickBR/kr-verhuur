@@ -479,7 +479,7 @@ function krv_booking_details_box( $post ) {
 					<option value="<?php echo (int) $p->ID; ?>" <?php selected( (int) $b['product_id'], $p->ID ); ?>><?php echo esc_html( $p->post_title ); ?></option>
 				<?php endforeach; ?>
 			</select></div>
-		<div><label for="krv_start">Eerste huurdag</label><input type="date" id="krv_start" name="krvb[start]" value="<?php echo esc_attr( $b['start'] ); ?>" required></div>
+		<div><label for="krv_start">Eerste huurdag</label><input type="date" id="krv_start" name="krvb[start]" value="<?php echo esc_attr( $b['start'] ); ?>"><div class="description" style="color:#646970;font-size:12px">Leeg laten bij verkoopartikelen.</div></div>
 		<div><label for="krv_end">Laatste huurdag</label><input type="date" id="krv_end" name="krvb[end]" value="<?php echo esc_attr( $b['end'] ); ?>"></div>
 		<div><label for="krv_quantity">Aantal</label><input type="number" min="1" id="krv_quantity" name="krvb[quantity]" value="<?php echo esc_attr( $b['quantity'] ); ?>"></div>
 		<div><label for="krv_discount">Korting (€ incl. btw)</label><input type="number" step="0.01" min="0" id="krv_discount" name="krvb[discount]" value="<?php echo esc_attr( get_post_meta( $post->ID, '_krv_discount', true ) ); ?>"></div>

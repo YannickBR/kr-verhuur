@@ -27,6 +27,8 @@ function krt_icon( $name, $class = '' ) {
 		'pin'          => '<path d="M12 22s7-7 7-12a7 7 0 0 0-14 0c0 5 7 12 7 12z"/><circle cx="12" cy="10" r="2.5"/>',
 		'arrow'        => '<path d="M5 12h14M13 6l6 6-6 6"/>',
 		'external'     => '<path d="M14 4h6v6M20 4l-9 9"/><path d="M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5"/>',
+		'zoom'         => '<circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3M11 8v6M8 11h6"/>',
+		'bag'          => '<path d="M5 8h14l-1 13H6z"/><path d="M9 8V6a3 3 0 0 1 6 0v2"/>',
 		'chevronLeft'  => '<path d="M15 5l-7 7 7 7"/>',
 		'chevronRight' => '<path d="M9 5l7 7-7 7"/>',
 		'menu'         => '<path d="M4 7h16M4 12h16M4 17h16"/>',
@@ -145,14 +147,58 @@ function krt_group_card( $term ) {
 function krt_product_media( $post_id, $size = 'large' ) {
 	$p    = krv_get_product( $post_id );
 	$icon = $p['group'] ? krv_group_meta( $p['group'] )['icon'] : 'box';
-	echo '<div class="product-media">';
-	if ( has_post_thumbnail( $post_id ) ) {
+	$has = has_post_thumbnail( $post_id );
+	echo '<div class="product-media' . ( $has ? ' has-image fit-' . esc_attr( $p['image_fit'] ) : '' ) . '">';
+	if ( $has ) {
 		echo get_the_post_thumbnail( $post_id, $size, array( 'loading' => 'lazy' ) );
 	} else {
 		echo krt_icon( $icon ); // phpcs:ignore
 	}
 	if ( $p['group'] ) {
 		echo '<span class="badge">' . esc_html( $p['group']->name ) . '</span>';
+	}
+	echo '</div>';
+}
+
+/**
+ * Foto's op de artikelpagina: één foto, of een slider met miniaturen als er meerdere zijn.
+ * Klik op een foto opent hem groot (zie assets/js/gallery.js).
+ */
+function krt_product_gallery( $post_id ) {
+	$p      = krv_get_product( $post_id );
+	$images = function_exists( 'krv_product_images' ) ? krv_product_images( $post_id ) : array();
+	if ( ! $images ) {
+		krt_product_media( $post_id, 'large' );
+		return;
+	}
+	$count = count( $images );
+	echo '<div class="gallery" data-gallery>';
+	echo '<div class="product-media has-image fit-' . esc_attr( $p['image_fit'] ) . ' gallery-main">';
+	foreach ( $images as $i => $id ) {
+		$full = wp_get_attachment_image_url( $id, 'full' );
+		$alt  = get_post_meta( $id, '_wp_attachment_image_alt', true );
+		echo '<figure class="gallery-slide' . ( 0 === $i ? ' is-active' : '' ) . '" data-full="' . esc_url( $full ) . '">';
+		echo wp_get_attachment_image( $id, 'large', false, array( 'loading' => 0 === $i ? 'eager' : 'lazy', 'alt' => $alt ? $alt : $p['name'] ) );
+		echo '</figure>';
+	}
+	if ( $p['group'] ) {
+		echo '<span class="badge">' . esc_html( $p['group']->name ) . '</span>';
+	}
+	echo '<button type="button" class="gallery-zoom" aria-label="Foto vergroten">' . krt_icon( 'zoom' ) . '</button>'; // phpcs:ignore
+	if ( $count > 1 ) {
+		echo '<button type="button" class="gallery-nav prev" aria-label="Vorige foto">' . krt_icon( 'chevronLeft' ) . '</button>'; // phpcs:ignore
+		echo '<button type="button" class="gallery-nav next" aria-label="Volgende foto">' . krt_icon( 'chevronRight' ) . '</button>'; // phpcs:ignore
+		echo '<span class="gallery-count"><span data-gallery-current>1</span> / ' . (int) $count . '</span>';
+	}
+	echo '</div>';
+	if ( $count > 1 ) {
+		echo '<div class="gallery-thumbs">';
+		foreach ( $images as $i => $id ) {
+			echo '<button type="button" class="gallery-thumb' . ( 0 === $i ? ' is-active' : '' ) . '" data-go="' . (int) $i . '" aria-label="Foto ' . (int) ( $i + 1 ) . '">';
+			echo wp_get_attachment_image( $id, 'thumbnail', false, array( 'loading' => 'lazy', 'alt' => '' ) );
+			echo '</button>';
+		}
+		echo '</div>';
 	}
 	echo '</div>';
 }
@@ -167,7 +213,11 @@ function krt_product_card( $post_id ) {
 			<h3><?php echo esc_html( $p['name'] ); ?></h3>
 			<p><?php echo esc_html( wp_trim_words( get_the_excerpt( $post_id ), 24 ) ); ?></p>
 			<div class="product-foot">
-				<span class="price"><?php echo krt_price( $p['price_day'] ); // phpcs:ignore ?> <small>/ dag <span class="only-excl">excl. btw</span></small></span>
+				<?php if ( $p['external_url'] && $p['price_day'] <= 0 ) : ?>
+					<span class="price price-external"><?php echo esc_html( $p['external_label'] ); ?></span>
+				<?php else : ?>
+					<span class="price"><?php echo krt_price( $p['price_day'] ); // phpcs:ignore ?> <small>/ <?php echo esc_html( krv_price_unit( $p ) ); ?> <span class="only-excl">excl. btw</span></small></span>
+				<?php endif; ?>
 				<span class="btn btn-outline">Bekijken</span>
 			</div>
 		</div>

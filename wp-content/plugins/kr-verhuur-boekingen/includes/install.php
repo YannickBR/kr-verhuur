@@ -62,6 +62,79 @@ add_action(
 	5
 );
 
+/**
+ * Eenmalige update bij versie 1.4.0:
+ * - De huurgroep Camper linkt niet meer direct naar Goboony, maar naar een eigen
+ *   huurartikel "Camper" met daarop een knop naar Goboony.
+ * - Er wordt een CONCEPT-pagina "Algemene voorwaarden" aangemaakt (niet gepubliceerd).
+ */
+add_action(
+	'init',
+	function () {
+		if ( version_compare( (string) get_option( 'krv_data_version', '1.0.0' ), '1.4.0', '>=' ) ) {
+			return;
+		}
+		// Pas uitvoeren nadat de post types geregistreerd zijn.
+		if ( ! post_type_exists( 'kr_product' ) || ! taxonomy_exists( 'kr_group' ) ) {
+			return;
+		}
+
+		// Camper: huurgroep → eigen artikelpagina met link naar Goboony.
+		$camper = get_term_by( 'slug', 'camper', 'kr_group' );
+		if ( $camper ) {
+			$url      = (string) get_term_meta( $camper->term_id, '_krv_external_url', true );
+			$existing = get_posts(
+				array(
+					'post_type'   => 'kr_product',
+					'post_status' => 'any',
+					'numberposts' => 1,
+					'fields'      => 'ids',
+					'tax_query'   => array( array( 'taxonomy' => 'kr_group', 'terms' => $camper->term_id ) ),
+				)
+			);
+			if ( $url && ! $existing ) {
+				$id = wp_insert_post(
+					array(
+						'post_type'    => 'kr_product',
+						'post_status'  => 'publish',
+						'post_title'   => 'Camper',
+						'post_excerpt' => 'Op avontuur met onze camper. Bekijk de beschikbaarheid en boek eenvoudig via Goboony.',
+						'post_content' => 'Op avontuur met onze camper! Bekijk de foto\'s en kenmerken hieronder. Reserveren doe je via Goboony: daar zie je direct de beschikbaarheid en de prijs.',
+					)
+				);
+				if ( $id && ! is_wp_error( $id ) ) {
+					wp_set_object_terms( $id, $camper->term_id, 'kr_group' );
+					update_post_meta( $id, '_krv_external_url', esc_url_raw( $url ) );
+					update_post_meta( $id, '_krv_features', "Compleet ingerichte camper\nReserveren via Goboony" );
+					delete_term_meta( $camper->term_id, '_krv_external_url' );
+				}
+			}
+		}
+
+		// Concept algemene voorwaarden.
+		if ( ! (int) krv_setting( 'terms_page' ) ) {
+			$page = wp_insert_post(
+				array(
+					'post_type'    => 'page',
+					'post_status'  => 'draft',
+					'post_title'   => 'Algemene voorwaarden',
+					'post_name'    => 'algemene-voorwaarden',
+					'post_content' => krv_terms_template(),
+				)
+			);
+			if ( $page && ! is_wp_error( $page ) ) {
+				$s               = get_option( 'krv_settings', array() );
+				$s               = is_array( $s ) ? $s : array();
+				$s['terms_page'] = (int) $page;
+				update_option( 'krv_settings', $s );
+			}
+		}
+
+		update_option( 'krv_data_version', '1.4.0' );
+	},
+	20
+);
+
 function krv_seed_groups() {
 	return array(
 		'camper'       => array( 'Camper', 'camper', 'Op avontuur met onze camper – boeken via Goboony.', 'goboony' ),

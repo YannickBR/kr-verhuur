@@ -20,11 +20,11 @@ window.KR = window.KR || {};
 
   KR.pricing = {
     calculate(p, sel) {
-      const days = Math.max(1, sel.days || 1);
+      const days = p.isSale ? 1 : Math.max(1, sel.days || 1);
       const qty = Math.max(1, sel.quantity || 1);
-      const lines = [
-        { key: "rent", label: (qty > 1 ? qty + "× " : "") + "Huur " + days + (days === 1 ? " dag" : " dagen"), amount: (p.priceDay + (days - 1) * p.priceExtraDay) * qty },
-      ];
+      const lines = p.isSale
+        ? [{ key: "sale", label: qty + "× " + p.unit + " à " + euro(p.priceDay), amount: p.priceDay * qty }]
+        : [{ key: "rent", label: (qty > 1 ? qty + "× " : "") + "Huur " + days + (days === 1 ? " dag" : " dagen"), amount: (p.priceDay + (days - 1) * p.priceExtraDay) * qty }];
       (sel.extras || []).forEach((key) => {
         const x = p.extras[key];
         if (!x) return;
@@ -46,8 +46,11 @@ window.KR = window.KR || {};
       deposit: Number(raw.deposit),
       maxDays: Number(raw.maxDays),
       stock: Number(raw.stock),
-      allowQuantity: !!Number(raw.allowQuantity),
+      allowQuantity: !!Number(raw.allowQuantity) || !!Number(raw.isSale),
+      isSale: !!Number(raw.isSale),
+      unit: raw.unit || "stuk",
     });
+    const sale = p.isSale; // Verkoop: geen kalender, alleen aantal.
     const minLead = Number(CFG.minLead) || 0;
     const maxAhead = Number(CFG.maxAhead) || 365;
     const icons = CFG.icons || {};
@@ -65,21 +68,22 @@ window.KR = window.KR || {};
         return (
           '<label class="option"><input type="checkbox" name="extra" value="' + esc(k) + '">' +
           '<span class="option-body"><span class="option-title"><span>' + esc(x.label) + "</span><span>+ " + priceSpan(Number(x.price)) +
-          (x.type === "perDay" ? " p/d" : "") + '</span></span><span class="option-desc">' + esc(x.description || "") + "</span></span></label>"
+          (x.type === "perDay" && !sale ? " p/d" : "") + '</span></span><span class="option-desc">' + esc(x.description || "") + "</span></span></label>"
         );
       })
       .join("");
 
+    let stepNo = 1;
     el.innerHTML =
-      "<h2>" + (icons.calendar || "") + "Reserveren</h2>" +
+      "<h2>" + (sale ? icons.cart || "" : icons.calendar || "") + (sale ? "Bestellen" : "Reserveren") + "</h2>" +
       '<form id="booking-form" novalidate>' +
-      '<div class="booking-step"><h3>1. Kies je huurdag(en)</h3><div id="calendar"><p class="cal-hint">Beschikbaarheid laden…</p></div></div>' +
+      (sale ? "" : '<div class="booking-step"><h3>' + stepNo++ + '. Kies je huurdag(en)</h3><div id="calendar"><p class="cal-hint">Beschikbaarheid laden…</p></div></div>') +
       (p.allowQuantity
-        ? '<div class="booking-step"><h3>Aantal <small>(max. ' + p.stock + ")</small></h3>" +
+        ? '<div class="booking-step"><h3>' + (sale ? stepNo++ + ". Aantal (" + esc(p.unit) + ")" : "Aantal") + " <small>(max. " + p.stock + ")</small></h3>" +
           '<div class="qty"><button type="button" data-q="-1" aria-label="Minder">−</button>' +
           '<input id="qty" type="number" min="1" max="' + p.stock + '" value="1" aria-label="Aantal"><button type="button" data-q="1" aria-label="Meer">+</button></div></div>'
         : "") +
-      (extrasHtml ? '<div class="booking-step"><h3>2. Extra opties</h3>' + extrasHtml + "</div>" : "") +
+      (extrasHtml ? '<div class="booking-step"><h3>' + stepNo++ + ". Extra opties</h3>" + extrasHtml + "</div>" : "") +
       '<div class="summary" id="summary"></div>' +
       '<button class="btn btn-primary btn-block" type="submit" id="submit-btn" disabled>' + (icons.cart || "") + "In winkelwagen</button>" +
       '<div id="booking-msg" aria-live="polite"></div>' +
@@ -90,9 +94,11 @@ window.KR = window.KR || {};
     const submitBtn = el.querySelector("#submit-btn");
     const msg = el.querySelector("#booking-msg");
 
+    const ready = () => sale || !!state.start;
+
     function update() {
-      submitBtn.disabled = !state.start;
-      if (!state.start) {
+      submitBtn.disabled = !ready();
+      if (!ready()) {
         summary.innerHTML =
           '<div class="summary-row"><span>Kies eerst een datum om de prijs te zien.</span></div>' +
           '<div class="summary-row"><span>Vanaf</span><span>' + show(p.priceDay) + " / dag</span></div>";
@@ -132,7 +138,7 @@ window.KR = window.KR || {};
         });
     }
 
-    loadAvailability().then(buildCalendar);
+    if (!sale) loadAvailability().then(buildCalendar);
 
     // Bezoeker wisselt incl./excl. btw: samenvatting opnieuw tonen (extra opties doet KR.vat.apply zelf).
     document.addEventListener("krv:vat", update);
@@ -165,16 +171,18 @@ window.KR = window.KR || {};
 
     form.addEventListener("submit", (e) => {
       e.preventDefault();
-      if (!state.start) return;
+      if (!ready()) return;
       const price = KR.pricing.calculate(p, state);
       KR.cart.add({
         product_id: p.id,
         name: p.name,
         url: CFG.productUrl,
         icon: CFG.productIcon || "",
-        start: state.start,
-        end: state.end,
-        days: state.days,
+        sale: sale,
+        unit: p.unit,
+        start: sale ? "" : state.start,
+        end: sale ? "" : state.end,
+        days: sale ? 0 : state.days,
         quantity: state.quantity,
         extras: state.extras.slice(),
         extraLabels: state.extras.map((k) => p.extras[k].label),

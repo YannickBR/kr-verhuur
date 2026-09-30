@@ -82,6 +82,12 @@ function krv_rest_create_booking( WP_REST_Request $r ) {
 		return new WP_Error( 'krv_invalid', 'Geen artikelen gekozen.', array( 'status' => 400 ) );
 	}
 
+	// Akkoord met de algemene voorwaarden (alleen als er een gepubliceerde pagina is ingesteld).
+	$terms_url = krv_terms_url();
+	if ( $terms_url && empty( $body['terms'] ) ) {
+		return new WP_Error( 'krv_terms', 'Ga akkoord met de algemene voorwaarden om te bestellen.', array( 'status' => 422 ) );
+	}
+
 	// Eerst alles valideren, dan pas opslaan (alles of niets).
 	$valid = array();
 	foreach ( $items as $i => $item ) {
@@ -107,6 +113,10 @@ function krv_rest_create_booking( WP_REST_Request $r ) {
 		}
 		if ( ! $request_id ) {
 			$request_id = krv_booking_ref( $id );
+		}
+		if ( $terms_url ) {
+			update_post_meta( $id, '_krv_terms_accepted', current_time( 'mysql' ) );
+			krv_log( $id, 'Klant is akkoord gegaan met de algemene voorwaarden.' );
 		}
 		$ids[] = $id;
 	}

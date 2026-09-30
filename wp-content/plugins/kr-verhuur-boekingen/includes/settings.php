@@ -22,6 +22,7 @@ function krv_default_settings() {
 		'prices_incl_vat' => 1,      // Ingevoerde prijzen (artikelen, extra opties) zijn incl. btw.
 		'display_vat'     => 'incl', // Standaardweergave op de website: 'incl' of 'excl' btw.
 		'vat_toggle'      => 1,      // Bezoeker mag zelf wisselen tussen incl. en excl. btw.
+		'terms_page'      => 0,      // Pagina met de algemene voorwaarden.
 	);
 }
 
@@ -68,6 +69,15 @@ function krv_statuses() {
 		'completed' => 'Afgerond',
 		'cancelled' => 'Geannuleerd',
 	);
+}
+
+/**
+ * Link naar de algemene voorwaarden, alleen als de gekozen pagina gepubliceerd is.
+ * Zolang er geen gepubliceerde pagina is, vraagt de winkelwagen ook geen akkoord.
+ */
+function krv_terms_url() {
+	$id = (int) krv_setting( 'terms_page' );
+	return $id && 'publish' === get_post_status( $id ) ? get_permalink( $id ) : '';
 }
 
 /** Statussen die de agenda blokkeren. */

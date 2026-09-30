@@ -25,7 +25,11 @@
   // Regel waarvan de datums gewijzigd worden: { key, start, end, days, data: {dates, max_days, stock} | null }
   let editing = null;
 
-  const period = (i) => D.pretty(i.start) + (i.days > 1 ? " t/m " + D.pretty(i.end) : "") + " · " + i.days + (i.days === 1 ? " dag" : " dagen");
+  const isSale = (i) => !!i.sale || !i.start;
+  const period = (i) =>
+    isSale(i)
+      ? "Koop · " + (i.quantity || 1) + " " + (i.unit || "stuk")
+      : D.pretty(i.start) + (i.days > 1 ? " t/m " + D.pretty(i.end) : "") + " · " + i.days + (i.days === 1 ? " dag" : " dagen");
   const payload = (i) => ({ product_id: i.product_id, start: i.start, end: i.end, quantity: i.quantity, extras: i.extras });
 
   async function validate() {
@@ -63,7 +67,7 @@
   }
 
   function captureForm() {
-    root.querySelectorAll("#checkout-form [name]").forEach((f) => (saved[f.name] = f.value));
+    root.querySelectorAll("#checkout-form [name]").forEach((f) => (saved[f.name] = f.type === "checkbox" ? f.checked : f.value));
   }
 
   function render() {
@@ -101,6 +105,8 @@
             ? '<div class="cart-edit"><div class="cart-edit-cal">' + (editing.data ? "" : '<p class="cal-hint">Beschikbaarheid laden…</p>') + "</div>" +
               '<div class="cart-edit-actions"><button type="button" class="btn btn-primary" data-edit-save' + (editing.start ? "" : " disabled") + ">Datums opslaan</button>" +
               '<button type="button" class="btn btn-outline" data-edit-cancel>Annuleren</button></div></div>'
+            : isSale(item)
+            ? ""
             : '<p class="cart-edit-link"><button type="button" class="link-btn" data-edit="' + esc(item.key) + '">Datums wijzigen</button></p>') +
           (lines
             ? '<ul class="cart-lines">' + lines.map((l) => "<li><span>" + esc(l.label) + "</span><span>" + show(l.amount) + "</span></li>").join("") + "</ul>"
@@ -137,6 +143,10 @@
       '<div class="field"><label for="c-city">Woonplaats *</label><input id="c-city" name="city" autocomplete="address-level2" required value="' + v("city") + '"></div>' +
       '<div class="field full"><label for="c-notes">Opmerkingen</label><textarea id="c-notes" name="notes" placeholder="Bijv. gewenste tijden of bijzonderheden">' + v("notes") + "</textarea></div>" +
       '<div class="hp" aria-hidden="true"><label>Website <input name="website" tabindex="-1" autocomplete="off"></label></div>' +
+      (CFG.termsUrl
+        ? '<div class="field full terms-field"><label class="checkbox"><input type="checkbox" name="terms" value="1" required' + (saved.terms ? " checked" : "") + "> " +
+          'Ik ga akkoord met de <a href="' + esc(CFG.termsUrl) + '" target="_blank" rel="noopener">algemene voorwaarden</a> *</label></div>'
+        : "") +
       "</div>" +
       '<div class="summary">' + (CFG.vatToggle || "") + totalsHtml(total) +
       '<div class="summary-note">' + (deposit ? "Excl. borg van " + euro(deposit) + ". " : "") + "Je ontvangt een bevestiging per e-mail; wij bevestigen de beschikbaarheid zo snel mogelijk.</div></div>" +
@@ -251,6 +261,7 @@
         notes: String(fd.get("notes") || "").trim(),
       },
       website: fd.get("website") || "",
+      terms: fd.get("terms") === "1",
     };
     busy = true;
     render();

@@ -29,6 +29,7 @@ add_action(
 			// Dubbele spaties (bijv. tussen postcode en plaats) blijven behouden.
 			'address_street'  => trim( wp_strip_all_tags( (string) ( $in['address_street'] ?? '' ) ) ),
 			'address_city'    => trim( wp_strip_all_tags( (string) ( $in['address_city'] ?? '' ) ) ),
+			'terms_page'      => max( 0, (int) ( $in['terms_page'] ?? 0 ) ),
 			'region'          => sanitize_text_field( $in['region'] ?? '' ),
 			'goboony_url'     => esc_url_raw( $in['goboony_url'] ?? '' ),
 			'min_lead_days'   => max( 0, (int) ( $in['min_lead_days'] ?? 1 ) ),
@@ -129,6 +130,27 @@ function krv_settings_page() {
 					<label><input type="checkbox" name="krv[blocking_status][]" value="pending" <?php checked( in_array( 'pending', $s['blocking_status'], true ) ); ?>> Aanvraag</label>&nbsp;&nbsp;
 					<label><input type="checkbox" name="krv[blocking_status][]" value="confirmed" <?php checked( in_array( 'confirmed', $s['blocking_status'], true ) ); ?>> Bevestigd</label>
 					<p class="description">Standaard blokkeren ook nog niet bevestigde aanvragen de agenda, zodat er niet dubbel geboekt wordt.</p></td></tr>
+				<tr><th><label for="terms_page">Algemene voorwaarden</label></th><td>
+					<?php
+					wp_dropdown_pages(
+						array(
+							'name'              => 'krv[terms_page]',
+							'id'                => 'terms_page',
+							'selected'          => (int) $s['terms_page'],
+							'show_option_none'  => '— Geen —',
+							'option_none_value' => 0,
+							'post_status'       => array( 'publish', 'draft', 'private' ),
+						)
+					);
+					$terms_id = (int) $s['terms_page'];
+					?>
+					<?php if ( $terms_id ) : ?>
+						<a class="button button-small" href="<?php echo esc_url( get_edit_post_link( $terms_id ) ); ?>">Pagina bewerken</a>
+						<?php if ( 'publish' !== get_post_status( $terms_id ) ) : ?>
+							<p class="description" style="color:#b32d2e"><strong>Nog niet gepubliceerd.</strong> Controleer de tekst en publiceer de pagina; pas dan moeten klanten bij het bestellen akkoord gaan.</p>
+						<?php endif; ?>
+					<?php endif; ?>
+					<p class="description">Als deze pagina gepubliceerd is, moet de klant bij het bestellen een vinkje zetten ("Ik ga akkoord met de algemene voorwaarden"). De link staat ook in de footer van de website en in de e-mails.</p></td></tr>
 			</table>
 
 			<h2>Btw</h2>
@@ -148,9 +170,10 @@ function krv_settings_page() {
 			</table>
 
 			<h2>Extra opties</h2>
-			<p class="description">Bijvoorbeeld halen en brengen of schoonmaakkosten. Per huurartikel kies je welke opties beschikbaar zijn.</p>
+			<p class="description">Bijvoorbeeld halen en brengen of schoonmaakkosten. Per huurartikel kies je welke opties beschikbaar zijn.<br>
+				"Vraagt afleveradres" betekent: kiest de klant deze optie, dan is straat en huisnummer verplicht in het bestelformulier. Er wordt geen afstand berekend; de prijs is vast (per boeking of per dag).</p>
 			<table class="widefat striped" id="krv-extras" style="max-width:1100px">
-				<thead><tr><th>Naam</th><th>Omschrijving</th><th style="width:100px">Prijs (€ <?php echo $s['prices_incl_vat'] ? 'incl.' : 'excl.'; ?> btw)</th><th style="width:130px">Berekening</th><th style="width:90px">Vraagt adres</th><th style="width:70px">Verwijder</th></tr></thead>
+				<thead><tr><th>Naam</th><th>Omschrijving</th><th style="width:100px">Prijs (€ <?php echo $s['prices_incl_vat'] ? 'incl.' : 'excl.'; ?> btw)</th><th style="width:130px">Berekening</th><th style="width:110px">Vraagt afleveradres</th><th style="width:70px">Verwijder</th></tr></thead>
 				<tbody>
 				<?php
 				$i = 0;

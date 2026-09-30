@@ -21,12 +21,22 @@ function krv_calculate_price( $product, $days, $quantity = 1, $extras = array() 
 	$all      = krv_extras_incl();
 	$lines    = array();
 
-	$rent    = krv_entered_to_incl( ( $product['price_day'] + ( $days - 1 ) * $product['price_extra_day'] ) * $quantity );
-	$lines[] = array(
-		'key'    => 'rent',
-		'label'  => ( $quantity > 1 ? $quantity . '× ' : '' ) . 'Huur ' . $days . ( 1 === $days ? ' dag' : ' dagen' ),
-		'amount' => round( $rent, 2 ),
-	);
+	if ( ! empty( $product['is_sale'] ) ) {
+		// Verkoop: aantal × prijs per eenheid, geen huurdagen.
+		$days    = 1;
+		$lines[] = array(
+			'key'    => 'sale',
+			'label'  => $quantity . '× ' . $product['unit'] . ' à ' . krv_euro( krv_entered_to_incl( $product['price_day'] ) ),
+			'amount' => round( krv_entered_to_incl( $product['price_day'] * $quantity ), 2 ),
+		);
+	} else {
+		$rent    = krv_entered_to_incl( ( $product['price_day'] + ( $days - 1 ) * $product['price_extra_day'] ) * $quantity );
+		$lines[] = array(
+			'key'    => 'rent',
+			'label'  => ( $quantity > 1 ? $quantity . '× ' : '' ) . 'Huur ' . $days . ( 1 === $days ? ' dag' : ' dagen' ),
+			'amount' => round( $rent, 2 ),
+		);
+	}
 
 	foreach ( (array) $extras as $key ) {
 		if ( ! isset( $all[ $key ] ) ) {
@@ -44,6 +54,6 @@ function krv_calculate_price( $product, $days, $quantity = 1, $extras = array() 
 	return array(
 		'lines'   => $lines,
 		'total'   => round( array_sum( wp_list_pluck( $lines, 'amount' ) ), 2 ),
-		'deposit' => (float) $product['deposit'],
+		'deposit' => ! empty( $product['is_sale'] ) ? 0.0 : (float) $product['deposit'],
 	);
 }
