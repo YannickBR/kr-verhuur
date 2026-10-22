@@ -135,6 +135,69 @@ add_action(
 	20
 );
 
+/**
+ * Eenmalige update bij versie 1.4.1: élke huurgroep met een externe link (ongeacht de naam,
+ * bijv. "Camperbus huren") verwijst voortaan naar een eigen artikelpagina met de knop naar
+ * die link, in plaats van direct naar de externe website.
+ * - Geen artikelen in de groep: er wordt een artikel aangemaakt met de link.
+ * - Eén artikel zonder eigen link: dat artikel krijgt de link.
+ * - Daarna wordt de link bij de groep weggehaald.
+ * Groepen met meerdere artikelen blijven ongemoeid (die kun je zelf aanpassen).
+ */
+add_action(
+	'init',
+	function () {
+		if ( version_compare( (string) get_option( 'krv_data_version', '1.0.0' ), '1.4.1', '>=' ) ) {
+			return;
+		}
+		if ( ! post_type_exists( 'kr_product' ) || ! taxonomy_exists( 'kr_group' ) ) {
+			return;
+		}
+		$terms = get_terms( array( 'taxonomy' => 'kr_group', 'hide_empty' => false ) );
+		foreach ( is_wp_error( $terms ) ? array() : $terms as $term ) {
+			$url = (string) get_term_meta( $term->term_id, '_krv_external_url', true );
+			if ( '' === $url ) {
+				continue;
+			}
+			$ids = get_posts(
+				array(
+					'post_type'   => 'kr_product',
+					'post_status' => array( 'publish', 'draft', 'pending', 'private' ),
+					'numberposts' => 2,
+					'fields'      => 'ids',
+					'tax_query'   => array( array( 'taxonomy' => 'kr_group', 'terms' => $term->term_id ) ),
+				)
+			);
+			if ( ! $ids ) {
+				$name = trim( preg_replace( '/\s+huren$/i', '', $term->name ) );
+				$id   = wp_insert_post(
+					array(
+						'post_type'    => 'kr_product',
+						'post_status'  => 'publish',
+						'post_title'   => $name ? $name : $term->name,
+						'post_excerpt' => krv_group_meta( $term )['tagline'],
+						'post_content' => krv_group_meta( $term )['tagline'],
+					)
+				);
+				if ( ! $id || is_wp_error( $id ) ) {
+					continue;
+				}
+				wp_set_object_terms( $id, $term->term_id, 'kr_group' );
+				update_post_meta( $id, '_krv_external_url', esc_url_raw( $url ) );
+			} elseif ( 1 === count( $ids ) ) {
+				if ( ! get_post_meta( $ids[0], '_krv_external_url', true ) ) {
+					update_post_meta( $ids[0], '_krv_external_url', esc_url_raw( $url ) );
+				}
+			} else {
+				continue;
+			}
+			delete_term_meta( $term->term_id, '_krv_external_url' );
+		}
+		update_option( 'krv_data_version', '1.4.1' );
+	},
+	21
+);
+
 function krv_seed_groups() {
 	return array(
 		'camper'       => array( 'Camper', 'camper', 'Op avontuur met onze camper – boeken via Goboony.', 'goboony' ),

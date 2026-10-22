@@ -78,11 +78,6 @@ add_action(
 		}
 		update_option( 'krv_email_texts', $texts );
 
-		// Goboony-link ook bij de huurgroep "camper" bijwerken als die nog naar Goboony wees.
-		$camper = get_term_by( 'slug', 'camper', 'kr_group' );
-		if ( $camper && false !== strpos( (string) get_term_meta( $camper->term_id, '_krv_external_url', true ), 'goboony' ) ) {
-			update_term_meta( $camper->term_id, '_krv_external_url', $settings['goboony_url'] );
-		}
 
 		wp_safe_redirect( admin_url( 'edit.php?post_type=kr_booking&page=krv-settings&saved=1' ) );
 		exit;

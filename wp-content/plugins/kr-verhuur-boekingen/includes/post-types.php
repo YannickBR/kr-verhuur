@@ -208,7 +208,31 @@ function krv_group_url( $term ) {
 	if ( $meta && $meta['external_url'] ) {
 		return $meta['external_url'];
 	}
+	// Eén artikel dat via een externe site geboekt wordt (bijv. de camper via Goboony):
+	// direct naar die artikelpagina, zonder tussenpagina met maar één kaart.
+	$single = krv_group_single_external_product( $term );
+	if ( $single ) {
+		return get_permalink( $single );
+	}
 	return get_term_link( $term );
+}
+
+/** ID van het enige artikel in een huurgroep, als dat artikel een externe boekingslink heeft. */
+function krv_group_single_external_product( $term ) {
+	$term = get_term( $term, 'kr_group' );
+	if ( ! $term || is_wp_error( $term ) ) {
+		return 0;
+	}
+	$ids = get_posts(
+		array(
+			'post_type'   => 'kr_product',
+			'post_status' => 'publish',
+			'numberposts' => 2,
+			'fields'      => 'ids',
+			'tax_query'   => array( array( 'taxonomy' => 'kr_group', 'terms' => $term->term_id ) ),
+		)
+	);
+	return 1 === count( $ids ) && get_post_meta( $ids[0], '_krv_external_url', true ) ? (int) $ids[0] : 0;
 }
 
 /** Laagste dagprijs binnen een huurgroep. */
