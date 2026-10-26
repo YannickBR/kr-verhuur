@@ -47,10 +47,10 @@ add_action(
 function krt_text_defaults() {
 	return array(
 		'footer_text'    => 'Huur alles voor je feest, evenement of klus. Eenvoudig online reserveren, wij regelen de rest.',
-		'hero_eyebrow'   => 'Verhuur voor feest, evenement & klus',
+		'hero_eyebrow'   => 'Verhuur in Marknesse, Emmeloord & de Noordoostpolder',
 		'hero_title'     => 'Voor als je het zelf niet hebt!',
 		'hero_highlight' => 'zelf',
-		'hero_lead'      => 'Van photobooth tot trilplaat: bij KR Verhuur huur je het eenvoudig voor één of meerdere dagen. Kies je datum in de kalender en reserveer direct online.',
+		'hero_lead'      => 'Photobooth, springkussen, toiletwagen, meubilair, verwarming of gereedschap huren? Bij KRverhuur in Marknesse huur je het eenvoudig voor één of meerdere dagen. Kies je datum, reserveer direct online en laat het bezorgen in de Noordoostpolder en omgeving.',
 	);
 }
 
@@ -260,6 +260,11 @@ add_filter(
 		if ( krt_has_plugin() && krv_is_cart() ) {
 			status_header( 200 );
 			return get_template_directory() . '/cart.php';
+		}
+		// Werkgebied: /verhuur/ en /verhuur/<plaats>/ (geregistreerd door de plugin).
+		if ( krt_has_plugin() && function_exists( 'krv_current_location_slug' ) && krv_current_location_slug() ) {
+			status_header( 200 );
+			return get_template_directory() . '/location.php';
 		}
 		return $template;
 	}

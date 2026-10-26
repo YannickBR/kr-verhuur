@@ -20,7 +20,7 @@ while ( have_posts() ) :
 				<?php if ( $group ) : ?><a href="<?php echo esc_url( krv_group_url( $group ) ); ?>"><?php echo esc_html( $group->name ); ?></a> /<?php endif; ?>
 				<?php the_title(); ?>
 			</div>
-			<h1><?php the_title(); ?></h1>
+			<h1><?php echo esc_html( $p['is_sale'] ? get_the_title() : krv_with_huren( get_the_title() ) ); ?></h1>
 			<?php if ( $gmeta ) : ?><p><?php echo esc_html( $gmeta['tagline'] ); ?></p><?php endif; ?>
 		</div>
 	</section>
@@ -56,6 +56,19 @@ while ( have_posts() ) :
 								<?php endif; ?>
 							<?php endif; ?>
 						</table>
+					</div>
+					<?php endif; ?>
+					<?php if ( ! $p['external_url'] ) : ?>
+					<div class="card card-spaced seo-text">
+						<h2><?php echo esc_html( ( $p['is_sale'] ? get_the_title() . ' bestellen' : krv_with_huren( get_the_title() ) ) . ' in de regio' ); ?></h2>
+						<p>
+							<?php if ( $p['is_sale'] ) : ?>
+								Bestel <?php echo esc_html( mb_strtolower( get_the_title() ) ); ?> eenvoudig online bij <?php echo esc_html( krv_company() ); ?> en haal ze op in Marknesse, of laat ze bezorgen samen met je huurartikelen.
+							<?php else : ?>
+								<?php echo esc_html( krv_with_huren( get_the_title() ) ); ?> doe je bij <?php echo esc_html( krv_company() ); ?> in Marknesse voor één of meerdere dagen. Haal het zelf op, of kies voor halen en brengen: wij bezorgen in <?php echo esc_html( krv_list_text( krv_seo_top_places( 4 ) ) ); ?> en de rest van de Noordoostpolder, Flevoland en de kop van Overijssel.
+							<?php endif; ?>
+						</p>
+						<?php krt_service_area_links( 'Bezorgen in', 12 ); ?>
 					</div>
 					<?php endif; ?>
 				</div>

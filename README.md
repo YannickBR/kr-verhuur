@@ -86,3 +86,15 @@ Er is een **concept**pagina *Algemene voorwaarden* aangemaakt (Pagina's). Contro
 ## Logo
 
 Het logo is als SVG nagebouwd in het theme. Wil je het originele bestand gebruiken? Upload het via *Weergave → Customizer → Site-identiteit → Logo*; het theme gebruikt het dan automatisch.
+
+## Vindbaarheid in Google (SEO)
+
+De plugin regelt zelf de belangrijkste SEO-onderdelen. Als Yoast, Rank Math, AIOSEO, SEOPress of The SEO Framework actief is, laat de plugin de titels en meta-tags aan die SEO-plugin over en levert alleen de juiste teksten en de werkgebied-pagina's aan.
+
+- **Werkgebied-pagina's**: `/verhuur/` geeft een overzicht en `/verhuur/<plaats>/` heeft een eigen pagina per plaats (Marknesse, Emmeloord, Ens, Urk, Espel, Nagele, Rutten, Kraggenburg, Creil, Bant, Tollebeek, Swifterbant, Biddinghuizen, Vollenhove, Zwartsluis, Blokzijl, Kuinre, Blankenham en Lemmer). Elke pagina heeft afstand, assortiment, veelgestelde vragen en links naar plaatsen in de buurt. Bij **Huurartikelen → Werkgebied (SEO)** zet je plaatsen aan of uit en schrijf je per plaats een eigen introductietekst. Doe dat zeker voor de belangrijkste plaatsen: unieke tekst scoort beter dan standaardtekst.
+- **Titels en omschrijvingen** worden automatisch gemaakt, bijv. "Springkussen huren in Emmeloord, Urk & Noordoostpolder". Per huurartikel en per huurgroep kun je ze overschrijven in het blok **Vindbaarheid in Google (SEO)**, met een voorbeeld van hoe het in Google eruitziet. De omschrijving van een huurgroep (Huurartikelen → Huurgroepen) verschijnt als tekst op de groepspagina.
+- **Gestructureerde gegevens** (JSON-LD): LocalBusiness met adres, telefoon en werkgebied, Product met prijzen, kruimelpad, FAQ en het werkgebied als Service.
+- **Sitemap**: `/wp-sitemap.xml` (of de sitemap van je SEO-plugin) bevat de werkgebied-pagina's. Oude RentMy-pagina's en de winkelwagen staan er niet in en krijgen `noindex`.
+- **Doorverwijzingen**: oude adressen van de vorige site (RentMy-pagina's, wishlist e.d.) sturen met een 301 door naar de nieuwe pagina's. Je beheert dit bij **Boekingen → Instellingen → SEO** (één regel per doorverwijzing: `/oud-adres/ /nieuw-adres/`). Daar vul je ook links naar je Google Bedrijfsprofiel, Facebook en Instagram in (`sameAs`) en eventueel de exacte coördinaten.
+
+Na livegang: dien de sitemap opnieuw in bij Google Search Console, verwijder de oude RentMy-pagina's en plugin, en houd je Google Bedrijfsprofiel (adres Marknesse, werkgebied, foto's, reviews) up-to-date. Dat profiel is voor lokale zoekopdrachten het belangrijkste.

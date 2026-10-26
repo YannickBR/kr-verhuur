@@ -18,7 +18,7 @@ $meta    = $current ? krv_group_meta( $current ) : null;
 				Assortiment
 			<?php endif; ?>
 		</div>
-		<h1><?php echo esc_html( $current ? $current->name . ' huren' : 'Ons assortiment' ); ?></h1>
+		<h1><?php echo esc_html( $current ? krv_with_huren( $current->name ) : 'Ons assortiment' ); ?></h1>
 		<p><?php echo esc_html( $current ? $meta['tagline'] . ' Kies een product, selecteer je huurdagen en reserveer direct.' : 'Kies een huurgroep of product, selecteer je huurdagen en reserveer direct online.' ); ?></p>
 	</div>
 </section>
@@ -55,5 +55,23 @@ $meta    = $current ? krv_group_meta( $current ) : null;
 				<p>In deze groep staan nog geen artikelen. Neem gerust contact met ons op!</p>
 			</div>
 		<?php endif; ?>
+
+		<?php
+		// Tekst voor bezoekers en Google: eigen beschrijving van de huurgroep, anders een standaardtekst.
+		$places  = krv_list_text( krv_seo_top_places( 3 ) );
+		$heading = $current ? krv_with_huren( $current->name ) . ' in de Noordoostpolder' : 'Huren in de Noordoostpolder en omgeving';
+		$text    = $current ? trim( term_description( $current ) ) : '';
+		?>
+		<div class="card seo-text">
+			<h2><?php echo esc_html( $heading ); ?></h2>
+			<?php if ( $text ) : ?>
+				<?php echo wp_kses_post( wpautop( $text ) ); ?>
+			<?php elseif ( $current ) : ?>
+				<p><?php echo esc_html( krv_with_huren( $current->name ) ); ?> doe je eenvoudig online bij <?php echo esc_html( krv_company() ); ?> in Marknesse. Kies het artikel dat bij je feest, evenement of klus past, selecteer één of meerdere huurdagen in de kalender en reserveer direct. Wij bezorgen en halen op in <?php echo esc_html( $places ); ?> en de rest van de Noordoostpolder, Flevoland en de kop van Overijssel. Ophalen bij ons in Marknesse kan ook.</p>
+			<?php else : ?>
+				<p>Bij <?php echo esc_html( krv_company() ); ?> in Marknesse huur je alles voor je feest, evenement of klus: van photobooth en springkussen tot toiletwagen, statafels, terrasverwarming, koeling en gereedschap. Reserveer online voor één of meerdere dagen en laat het bezorgen in <?php echo esc_html( $places ); ?> of elders in de Noordoostpolder, Flevoland en Overijssel.</p>
+			<?php endif; ?>
+			<?php krt_service_area_links( $current ? krv_with_huren( $current->name ) . ' in de buurt' : 'Wij bezorgen in' ); ?>
+		</div>
 	</div>
 </section>

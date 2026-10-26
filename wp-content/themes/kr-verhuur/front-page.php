@@ -64,6 +64,19 @@ $region = krt_setting( 'region' );
 	</div>
 </section>
 
+<?php if ( krt_has_plugin() && function_exists( 'krv_locations' ) && krv_locations() ) : ?>
+<section class="section section-tight" id="werkgebied">
+	<div class="container">
+		<div class="card seo-text">
+			<span class="eyebrow">Werkgebied</span>
+			<h2>Verhuur in de Noordoostpolder, Flevoland en Overijssel</h2>
+			<p><?php echo esc_html( krv_company() ); ?> zit in Marknesse en bezorgt in de hele Noordoostpolder en daarbuiten: van Emmeloord, Ens en Urk tot Vollenhove, Blokzijl, Swifterbant en Lemmer. Je huurartikelen zelf ophalen in Marknesse kan natuurlijk ook.</p>
+			<?php krt_service_area_links( 'Wij bezorgen in' ); ?>
+		</div>
+	</div>
+</section>
+<?php endif; ?>
+
 <section class="section section-tight" id="contact">
 	<div class="container">
 		<div class="cta-band">

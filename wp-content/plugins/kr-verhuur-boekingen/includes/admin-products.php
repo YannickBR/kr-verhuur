@@ -29,6 +29,7 @@ add_action(
 	'add_meta_boxes_kr_product',
 	function () {
 		add_meta_box( 'krv_product', 'Huurgegevens', 'krv_product_metabox', 'kr_product', 'normal', 'high' );
+		add_meta_box( 'krv_seo', 'Vindbaarheid in Google (SEO)', 'krv_product_seo_metabox', 'kr_product', 'normal', 'default' );
 	}
 );
 
@@ -170,6 +171,112 @@ add_action(
 		update_post_meta( $post_id, '_krv_image_fit', 'cover' === ( $in['image_fit'] ?? '' ) ? 'cover' : 'contain' );
 		$gallery = array_values( array_filter( array_map( 'intval', explode( ',', (string) ( $in['gallery'] ?? '' ) ) ) ) );
 		update_post_meta( $post_id, '_krv_gallery', $gallery );
+	}
+);
+
+/** Velden "SEO-titel" en "Meta-omschrijving" met Google-voorbeeld. */
+function krv_seo_fields_html( $title, $desc, $auto_title, $auto_desc, $url ) {
+	?>
+	<div class="krv-seo">
+		<p><label for="krv_seo_title"><strong>Titel in Google</strong> <span class="krv-count" data-for="krv_seo_title" data-max="60"></span></label><br>
+			<input type="text" id="krv_seo_title" name="krv_seo[title]" value="<?php echo esc_attr( $title ); ?>" placeholder="<?php echo esc_attr( $auto_title ); ?>" style="width:100%"></p>
+		<p><label for="krv_seo_desc"><strong>Omschrijving in Google</strong> <span class="krv-count" data-for="krv_seo_desc" data-max="155"></span></label><br>
+			<textarea id="krv_seo_desc" name="krv_seo[desc]" rows="3" style="width:100%" placeholder="<?php echo esc_attr( $auto_desc ); ?>"><?php echo esc_textarea( $desc ); ?></textarea></p>
+		<p class="description">Leeg laten = automatische tekst (zie grijze voorbeeldtekst), met de plaatsen uit je werkgebied. Tip: noem het product, "huren" en een plaats, bijv. "Springkussen huren in Emmeloord".</p>
+		<div class="krv-serp">
+			<div class="krv-serp-url"><?php echo esc_html( preg_replace( '#^https?://#', '', (string) $url ) ); ?></div>
+			<div class="krv-serp-title" data-auto="<?php echo esc_attr( $auto_title ); ?>"><?php echo esc_html( $title ? $title : $auto_title ); ?></div>
+			<div class="krv-serp-desc" data-auto="<?php echo esc_attr( $auto_desc ); ?>"><?php echo esc_html( $desc ? $desc : $auto_desc ); ?></div>
+		</div>
+	</div>
+	<style>
+		.krv-serp{max-width:600px;border:1px solid #dcdcde;border-radius:8px;padding:12px 16px;background:#fff;font-family:arial,sans-serif;margin-top:8px}
+		.krv-serp-url{color:#202124;font-size:12px}
+		.krv-serp-title{color:#1a0dab;font-size:19px;line-height:1.3;margin:4px 0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+		.krv-serp-desc{color:#4d5156;font-size:13px;line-height:1.5}
+		.krv-count{font-weight:400;color:#646970;font-size:12px}.krv-count.over{color:#b32d2e}
+	</style>
+	<script>
+	(function () {
+		function bind(id, target, max) {
+			var el = document.getElementById(id), out = document.querySelector('.' + target), cnt = document.querySelector('.krv-count[data-for="' + id + '"]');
+			if (!el) return;
+			function sync() {
+				var v = el.value.trim() || out.getAttribute('data-auto');
+				out.textContent = v.length > max + 5 ? v.slice(0, max) + '…' : v;
+				cnt.textContent = '(' + v.length + ' / ' + max + ' tekens' + (el.value.trim() ? '' : ', automatisch') + ')';
+				cnt.classList.toggle('over', v.length > max);
+			}
+			el.addEventListener('input', sync); sync();
+		}
+		bind('krv_seo_title', 'krv-serp-title', 60);
+		bind('krv_seo_desc', 'krv-serp-desc', 155);
+	})();
+	</script>
+	<?php
+}
+
+function krv_product_seo_metabox( $post ) {
+	wp_nonce_field( 'krv_product_seo', 'krv_product_seo_nonce' );
+	$ctx = array( 'type' => 'product', 'id' => $post->ID );
+	// Automatische teksten zonder de eigen velden.
+	$title = get_post_meta( $post->ID, '_krv_seo_title', true );
+	$desc  = get_post_meta( $post->ID, '_krv_seo_desc', true );
+	add_filter( 'get_post_metadata', $skip = function ( $v, $id, $key ) use ( $post ) {
+		return ( (int) $id === (int) $post->ID && in_array( $key, array( '_krv_seo_title', '_krv_seo_desc' ), true ) ) ? array( '' ) : $v;
+	}, 10, 3 );
+	$auto_title = 'auto-draft' === $post->post_status ? '' : krv_seo_title( $ctx );
+	$auto_desc  = 'auto-draft' === $post->post_status ? '' : krv_seo_description( $ctx );
+	remove_filter( 'get_post_metadata', $skip, 10 );
+	krv_seo_fields_html( $title, $desc, $auto_title, $auto_desc, get_permalink( $post ) );
+	if ( krv_seo_plugin() ) {
+		echo '<p class="description">Je gebruikt ook een SEO-plugin: wat je dáár invult gaat voor op deze automatische tekst. Vul je hier iets in, dan gaat dit voor.</p>';
+	}
+}
+
+add_action(
+	'save_post_kr_product',
+	function ( $post_id ) {
+		if ( ! isset( $_POST['krv_product_seo_nonce'] ) || ! wp_verify_nonce( sanitize_key( $_POST['krv_product_seo_nonce'] ), 'krv_product_seo' ) || ! current_user_can( 'edit_post', $post_id ) ) {
+			return;
+		}
+		$in = isset( $_POST['krv_seo'] ) ? wp_unslash( (array) $_POST['krv_seo'] ) : array(); // phpcs:ignore WordPress.Security.ValidatedSanitizedInput
+		update_post_meta( $post_id, '_krv_seo_title', sanitize_text_field( $in['title'] ?? '' ) );
+		update_post_meta( $post_id, '_krv_seo_desc', sanitize_textarea_field( $in['desc'] ?? '' ) );
+	}
+);
+
+/* SEO-velden bij huurgroepen. */
+add_action(
+	'kr_group_edit_form_fields',
+	function ( $term ) {
+		$ctx   = array( 'type' => 'group', 'term' => $term );
+		$title = get_term_meta( $term->term_id, '_krv_seo_title', true );
+		$desc  = get_term_meta( $term->term_id, '_krv_seo_desc', true );
+		add_filter( 'get_term_metadata', $skip = function ( $v, $id, $key ) use ( $term ) {
+			return ( (int) $id === (int) $term->term_id && in_array( $key, array( '_krv_seo_title', '_krv_seo_desc' ), true ) ) ? array( '' ) : $v;
+		}, 10, 3 );
+		$auto_title = krv_seo_title( $ctx );
+		$auto_desc  = krv_seo_description( $ctx );
+		remove_filter( 'get_term_metadata', $skip, 10 );
+		echo '<tr class="form-field"><th scope="row">Vindbaarheid in Google</th><td>';
+		wp_nonce_field( 'krv_group_seo', 'krv_group_seo_nonce' );
+		krv_seo_fields_html( $title, $desc, $auto_title, $auto_desc, get_term_link( $term ) );
+		echo '<p class="description">Tip: gebruik ook het veld <strong>Beschrijving</strong> hierboven voor een paar zinnen over deze huurgroep; die tekst komt op de groepspagina en helpt in Google.</p>';
+		echo '</td></tr>';
+	},
+	20
+);
+
+add_action(
+	'edited_kr_group',
+	function ( $term_id ) {
+		if ( ! isset( $_POST['krv_group_seo_nonce'] ) || ! wp_verify_nonce( sanitize_key( $_POST['krv_group_seo_nonce'] ), 'krv_group_seo' ) || ! current_user_can( 'manage_categories' ) ) {
+			return;
+		}
+		$in = isset( $_POST['krv_seo'] ) ? wp_unslash( (array) $_POST['krv_seo'] ) : array(); // phpcs:ignore WordPress.Security.ValidatedSanitizedInput
+		update_term_meta( $term_id, '_krv_seo_title', sanitize_text_field( $in['title'] ?? '' ) );
+		update_term_meta( $term_id, '_krv_seo_desc', sanitize_textarea_field( $in['desc'] ?? '' ) );
 	}
 );
 

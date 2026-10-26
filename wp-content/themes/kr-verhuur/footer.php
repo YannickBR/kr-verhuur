@@ -41,6 +41,12 @@
 				?>
 			</div>
 		</div>
+		<?php if ( function_exists( 'krv_locations' ) && krv_locations() ) : ?>
+			<nav class="footer-area" aria-label="Werkgebied">
+				<strong><a href="<?php echo esc_url( krv_service_area_url() ); ?>">Verhuur in</a>:</strong>
+				<?php $links = array(); foreach ( krv_locations() as $s => $l ) { $links[] = '<a href="' . esc_url( krv_location_url( $s ) ) . '">' . esc_html( $l['name'] ) . '</a>'; } echo implode( ' · ', $links ); // phpcs:ignore ?>
+			</nav>
+		<?php endif; ?>
 		<div class="footer-bottom">
 			<span>&copy; <?php echo esc_html( wp_date( 'Y' ) . ' ' . krt_setting( 'company_name', get_bloginfo( 'name' ) ) ); ?></span>
 			<span>

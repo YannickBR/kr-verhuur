@@ -30,6 +30,10 @@ add_action(
 			'address_street'  => trim( wp_strip_all_tags( (string) ( $in['address_street'] ?? '' ) ) ),
 			'address_city'    => trim( wp_strip_all_tags( (string) ( $in['address_city'] ?? '' ) ) ),
 			'terms_page'      => max( 0, (int) ( $in['terms_page'] ?? 0 ) ),
+			'seo_redirects'   => sanitize_textarea_field( $in['seo_redirects'] ?? '' ),
+			'seo_same_as'     => implode( "\n", array_filter( array_map( 'esc_url_raw', array_map( 'trim', explode( "\n", (string) ( $in['seo_same_as'] ?? '' ) ) ) ) ) ),
+			'geo_lat'         => '' === trim( (string) ( $in['geo_lat'] ?? '' ) ) ? '' : (float) str_replace( ',', '.', $in['geo_lat'] ),
+			'geo_lng'         => '' === trim( (string) ( $in['geo_lng'] ?? '' ) ) ? '' : (float) str_replace( ',', '.', $in['geo_lng'] ),
 			'region'          => sanitize_text_field( $in['region'] ?? '' ),
 			'goboony_url'     => esc_url_raw( $in['goboony_url'] ?? '' ),
 			'min_lead_days'   => max( 0, (int) ( $in['min_lead_days'] ?? 1 ) ),
@@ -196,6 +200,29 @@ function krv_settings_page() {
 				</tr>
 				</tbody>
 			</table>
+			<h2 id="seo">Vindbaarheid in Google (SEO)</h2>
+			<?php $seo_plugin = krv_seo_plugin(); ?>
+			<p class="description">
+				Titels, omschrijvingen, social previews en structured data (bedrijfsgegevens, werkgebied, prijzen) worden automatisch gemaakt.
+				Per huurartikel en huurgroep kun je ze aanpassen in het blok "Vindbaarheid in Google".
+				Werkgebiedpagina's beheer je via <a href="<?php echo esc_url( admin_url( 'edit.php?post_type=kr_product&page=krv-locations' ) ); ?>">Huurartikelen → Werkgebied (SEO)</a>.
+				<?php if ( $seo_plugin ) : ?>
+					<br><strong>SEO-plugin gevonden (<?php echo esc_html( $seo_plugin ); ?>):</strong> die blijft de tags printen; wij geven hem onze standaardteksten door waar je in die plugin niets hebt ingevuld, en zorgen dat de werkgebiedpagina's een juiste titel en canonical hebben.
+				<?php endif; ?>
+			</p>
+			<table class="form-table" role="presentation">
+				<tr><th><label for="seo_redirects">Doorverwijzingen (301)</label></th><td>
+					<textarea class="large-text code" rows="8" id="seo_redirects" name="krv[seo_redirects]"><?php echo esc_textarea( null === krv_setting( 'seo_redirects' ) ? krv_seo_default_redirects() : krv_setting( 'seo_redirects' ) ); ?></textarea>
+					<p class="description">Eén per regel: <code>/oude-pagina/ => /nieuwe-pagina/</code>. Standaard staan hier de pagina's van de vorige verhuurplugin (RentMy e.d.) die nog in Google staan; die worden zo netjes doorgestuurd en verdwijnen uit de zoekresultaten.</p></td></tr>
+				<tr><th><label for="seo_same_as">Social media</label></th><td>
+					<textarea class="large-text code" rows="3" id="seo_same_as" name="krv[seo_same_as]" placeholder="https://www.facebook.com/krverhuur&#10;https://www.instagram.com/krverhuur"><?php echo esc_textarea( (string) krv_setting( 'seo_same_as' ) ); ?></textarea>
+					<p class="description">Links naar je Facebook-, Instagram- of Google-bedrijfsprofiel (één per regel). Google koppelt die zo aan je bedrijf.</p></td></tr>
+				<tr><th>Locatie op de kaart</th><td>
+					<input type="text" name="krv[geo_lat]" value="<?php echo esc_attr( (string) krv_setting( 'geo_lat' ) ); ?>" placeholder="52.7046" style="width:110px"> &nbsp;
+					<input type="text" name="krv[geo_lng]" value="<?php echo esc_attr( (string) krv_setting( 'geo_lng' ) ); ?>" placeholder="5.8752" style="width:110px">
+					<p class="description">Breedte- en lengtegraad van je bedrijf (in Google Maps: rechtsklik op de locatie). Leeg = Marknesse (Waterpas).</p></td></tr>
+			</table>
+
 			<h2 id="emails">E-mails aan klanten</h2>
 			<p class="description">Pas de teksten aan naar je eigen toon. Je kunt deze codes gebruiken; ze worden automatisch ingevuld:
 				<?php foreach ( krv_email_placeholder_help() as $code => $help ) : ?>

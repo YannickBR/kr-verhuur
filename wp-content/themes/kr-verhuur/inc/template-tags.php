@@ -224,3 +224,29 @@ function krt_product_card( $post_id ) {
 	</a>
 	<?php
 }
+
+/**
+ * Links naar de werkgebiedpagina's ("Wij bezorgen in Marknesse · Emmeloord · Urk · …").
+ * Goed voor bezoekers én voor de interne linkstructuur in Google.
+ */
+function krt_service_area_links( $title = 'Wij bezorgen in', $limit = 0, $exclude = '' ) {
+	if ( ! function_exists( 'krv_locations' ) ) {
+		return;
+	}
+	$locs = krv_locations();
+	if ( $exclude ) {
+		unset( $locs[ $exclude ] );
+	}
+	if ( $limit ) {
+		$locs = array_slice( $locs, 0, $limit, true );
+	}
+	if ( ! $locs ) {
+		return;
+	}
+	echo '<div class="area-links"><h3>' . esc_html( $title ) . '</h3><ul>';
+	foreach ( $locs as $slug => $l ) {
+		echo '<li><a href="' . esc_url( krv_location_url( $slug ) ) . '">' . krt_icon( 'pin' ) . esc_html( $l['name'] ) . '</a></li>'; // phpcs:ignore
+	}
+	echo '<li><a class="area-all" href="' . esc_url( krv_service_area_url() ) . '">Bekijk het hele werkgebied ' . krt_icon( 'arrow' ) . '</a></li>'; // phpcs:ignore
+	echo '</ul></div>';
+}
