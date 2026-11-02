@@ -281,3 +281,29 @@ function krv_seed_content() {
 		update_post_meta( $id, '_krv_extras', $extras );
 	}
 }
+
+/**
+ * Eenmalige update bij versie 1.5.1: de homepage-pagina heette op de oude site "Fotoboek"
+ * (met een fotoboek-samenvatting). SEO-plugins tonen die titel in Google, dus die pagina
+ * heet voortaan "Home".
+ */
+add_action(
+	'init',
+	function () {
+		if ( version_compare( (string) get_option( 'krv_data_version', '1.0.0' ), '1.5.1', '>=' ) ) {
+			return;
+		}
+		$front = 'page' === get_option( 'show_on_front' ) ? (int) get_option( 'page_on_front' ) : 0;
+		if ( $front && 'fotoboek' === strtolower( trim( (string) get_the_title( $front ) ) ) ) {
+			wp_update_post(
+				array(
+					'ID'           => $front,
+					'post_title'   => 'Home',
+					'post_excerpt' => '',
+				)
+			);
+		}
+		update_option( 'krv_data_version', '1.5.1' );
+	},
+	22
+);

@@ -147,7 +147,7 @@ function krv_seo_title( $ctx = null ) {
 	$places = implode( ', ', krv_seo_top_places( 2 ) );
 	switch ( $ctx['type'] ) {
 		case 'home':
-			return $company . ' – Verhuur in Marknesse, Emmeloord & de Noordoostpolder';
+			return 'Verhuur in Emmeloord, Marknesse & de Noordoostpolder | ' . $company;
 		case 'product':
 			$p = krv_get_product( $ctx['id'] );
 			if ( $p['is_sale'] ) {
@@ -159,7 +159,7 @@ function krv_seo_title( $ctx = null ) {
 		case 'catalog':
 			return 'Huren voor feest, evenement & klus – Noordoostpolder | ' . $company;
 		case 'location':
-			return 'Verhuur ' . $ctx['loc']['name'] . ' – photobooth, springkussen & toiletwagen huren | ' . $company;
+			return 'Verhuur ' . $ctx['loc']['name'] . ' – springkussen, photobooth & meer huren | ' . $company;
 		case 'area':
 			return 'Werkgebied – verhuur Noordoostpolder, Flevoland & Overijssel | ' . $company;
 		case 'cart':
@@ -178,7 +178,7 @@ function krv_seo_description( $ctx = null ) {
 	$places  = krv_list_text( krv_seo_top_places( 3 ) );
 	switch ( $ctx['type'] ) {
 		case 'home':
-			return krv_seo_trim( $company . ' in Marknesse: huur een photobooth, springkussen, bumperbaan, toiletwagen, meubilair, verwarming of gereedschap. Online reserveren, bezorging in ' . $places . ' en de hele Noordoostpolder.' );
+			return krv_seo_trim( $company . ' uit Marknesse: photobooth, springkussen, toiletwagen en verwarming huren. Bezorging in Emmeloord, Urk en de Noordoostpolder. Online reserveren.' );
 		case 'product':
 			$p     = krv_get_product( $ctx['id'] );
 			$post  = get_post( $ctx['id'] );
@@ -197,7 +197,7 @@ function krv_seo_description( $ctx = null ) {
 			return krv_seo_trim( 'Bekijk het complete huuraanbod van ' . $company . ': photobooth, springkussen, bumperbaan, toiletwagen, meubilair, verwarming, koeling en gereedschap. Online reserveren in de Noordoostpolder.' );
 		case 'location':
 			$l = $ctx['loc'];
-			return krv_seo_trim( 'Verhuur in ' . $l['name'] . ': photobooth, springkussen, toiletwagen, statafels, verwarming en meer huren bij ' . $company . '. Wij bezorgen in ' . $l['name'] . ( $l['gemeente'] !== $l['name'] ? ' (gemeente ' . $l['gemeente'] . ')' : '' ) . '. Direct online reserveren.' );
+			return krv_seo_trim( 'Verhuur in ' . $l['name'] . ': photobooth, springkussen, toiletwagen, verwarming en meer huren bij ' . $company . '. Bezorging in ' . $l['name'] . ( $l['gemeente'] !== $l['name'] ? ' (' . $l['gemeente'] . ')' : '' ) . ' en omgeving.' );
 		case 'area':
 			return krv_seo_trim( $company . ' uit Marknesse bezorgt in ' . implode( ', ', krv_seo_top_places( 8 ) ) . ' en de rest van de Noordoostpolder, Flevoland en Overijssel.' );
 	}
@@ -317,7 +317,7 @@ function krv_seo_for_plugin( $field, $current ) {
 	if ( ! $virtual ) {
 		if ( krv_seo_custom( $ctx, $field ) ) {
 			// Eigen veld in onze plugin gaat voor.
-		} elseif ( krv_seo_plugin_has_own( $ctx, $field ) || 'home' === $ctx['type'] ) {
+		} elseif ( krv_seo_plugin_has_own( $ctx, $field ) ) {
 			return null;
 		}
 	}
@@ -350,6 +350,28 @@ add_filter( 'rank_math/opengraph/url', function ( $v ) { $c = krv_seo_virtual_ca
 add_filter( 'aioseo_title', function ( $v ) { $n = krv_seo_for_plugin( 'title', $v ); return null === $n ? $v : $n; }, 20 );
 add_filter( 'aioseo_description', function ( $v ) { $n = krv_seo_for_plugin( 'desc', $v ); return null === $n ? $v : $n; }, 20 );
 add_filter( 'aioseo_canonical_url', function ( $v ) { $c = krv_seo_virtual_canonical(); return $c ? $c : $v; }, 20 );
+foreach ( array( 'aioseo_facebook_tags' => 'og', 'aioseo_twitter_tags' => 'twitter' ) as $hook => $pre ) {
+	add_filter(
+		$hook,
+		function ( $tags ) use ( $pre ) {
+			if ( ! is_array( $tags ) ) {
+				return $tags;
+			}
+			foreach ( array( 'title' => 'title', 'description' => 'desc' ) as $key => $field ) {
+				$n = isset( $tags[ $pre . ':' . $key ] ) ? krv_seo_for_plugin( $field, $tags[ $pre . ':' . $key ] ) : null;
+				if ( null !== $n ) {
+					$tags[ $pre . ':' . $key ] = $n;
+				}
+			}
+			$c = krv_seo_virtual_canonical();
+			if ( $c && isset( $tags['og:url'] ) ) {
+				$tags['og:url'] = $c;
+			}
+			return $tags;
+		},
+		20
+	);
+}
 // SEOPress.
 add_filter( 'seopress_titles_title', function ( $v ) { $n = krv_seo_for_plugin( 'title', $v ); return null === $n ? $v : $n; }, 20 );
 add_filter( 'seopress_titles_desc', function ( $v ) { $n = krv_seo_for_plugin( 'desc', $v ); return null === $n ? $v : $n; }, 20 );
@@ -603,6 +625,63 @@ function krv_seo_default_redirects() {
 	return "/rentmy-products-list/ => /huren/\n/all-items/ => /huren/\n/rentmy-checkout/ => /winkelwagen/\n/rentmy-customer-login/ => /\n/rentmy-user-registration/ => /\n/rentmy-customer-profile/ => /\n/tf-wishlist/ => /huren/\n/cancel-appointment/ => /\n/add_services/ => /huren/";
 }
 
+/**
+ * Ingebouwde regels voor pagina's van de vorige website(s): camperpagina's, RentMy,
+ * boekings- en afsprakenplugins en lege testpagina's. Pad zonder slashes => doel.
+ * Een eigen doorverwijzing (Instellingen → SEO) voor hetzelfde adres gaat voor.
+ */
+function krv_seo_legacy_rules() {
+	return array(
+		'#^voertuigen(/.*)?$#' => 'camper',
+		'#^(materialen|winkel|reserveren|all-items|add[_-]services|search-result|tf-.+|rentmy-(catalog|products-list|product-details|package-details))$#' => 'catalog',
+		'#^(checkout|afrekenen|rentmy-(cart|checkout))$#' => 'cart',
+		'#^terms-conditions$#' => 'terms',
+		'#^(referenties|mijn-account|my-account|my-bookings|thank-you|confirmation|admin-confirmation|cancel-.+|appointment-.+|book-appointment|wpbc-.+|rentmy-.+|evenementen[^/]*(/.*)?)$#' => 'home',
+	);
+}
+
+/** Nieuw adres voor een oud pad (zonder slashes), of '' als het geen oude pagina is. */
+function krv_seo_legacy_target( $path ) {
+	$path = strtolower( trim( (string) $path, '/' ) );
+	if ( '' === $path ) {
+		return '';
+	}
+	if ( 'blog' === $path ) {
+		$count = wp_count_posts( 'post' );
+		return empty( $count->publish ) ? home_url( '/' ) : '';
+	}
+	foreach ( krv_seo_legacy_rules() as $re => $to ) {
+		if ( ! preg_match( $re, $path ) ) {
+			continue;
+		}
+		switch ( $to ) {
+			case 'camper':
+				return krv_seo_camper_url();
+			case 'catalog':
+				return get_post_type_archive_link( 'kr_product' );
+			case 'cart':
+				return krv_cart_url();
+			case 'terms':
+				return krv_terms_url() ?: home_url( '/' );
+		}
+		return home_url( '/' );
+	}
+	return '';
+}
+
+/** Het camper-artikel (met link naar Goboony), anders het assortiment. */
+function krv_seo_camper_url() {
+	$ids = get_posts(
+		array(
+			'post_type'   => 'kr_product',
+			'numberposts' => 1,
+			'fields'      => 'ids',
+			'meta_query'  => array( array( 'key' => '_krv_external_url', 'value' => 'goboony', 'compare' => 'LIKE' ) ), // phpcs:ignore WordPress.DB.SlowDBQuery
+		)
+	);
+	return $ids ? get_permalink( $ids[0] ) : get_post_type_archive_link( 'kr_product' );
+}
+
 /** Doorverwijzingen als [ '/oud/' => '/nieuw/' ]. */
 function krv_seo_redirects() {
 	$raw = krv_setting( 'seo_redirects' );
@@ -631,9 +710,16 @@ add_action(
 		}
 		$key = strtolower( '/' . trim( $path, '/' ) . '/' );
 		$map = krv_seo_redirects();
-		if ( '//' !== $key && isset( $map[ $key ] ) ) {
+		if ( '//' === $key ) {
+			return;
+		}
+		if ( isset( $map[ $key ] ) ) {
 			$to = $map[ $key ];
 			$to = preg_match( '#^https?://#', $to ) ? $to : home_url( $to );
+		} else {
+			$to = krv_seo_legacy_target( $key );
+		}
+		if ( $to && untrailingslashit( $to ) !== untrailingslashit( home_url( $key ) ) ) {
 			wp_safe_redirect( $to, 301, 'KRverhuur' );
 			exit;
 		}
@@ -643,15 +729,25 @@ add_action(
 
 /** Pagina's die (nog) bestaan maar niet in Google horen. */
 function krv_seo_is_excluded_page() {
-	if ( ! is_singular( 'page' ) ) {
-		return false;
+	return is_singular( 'page' ) && in_array( get_queried_object_id(), krv_seo_excluded_page_ids(), true );
+}
+
+/** ID's van gepubliceerde pagina's die uit de sitemap moeten (oude site, doorverwezen). */
+function krv_seo_excluded_page_ids() {
+	static $ids = null;
+	if ( null !== $ids ) {
+		return $ids;
 	}
-	$slug = get_post_field( 'post_name', get_queried_object_id() );
-	if ( preg_match( '/^(rentmy-|tf-wishlist|cancel-appointment|add_services|add-services|all-items)/', (string) $slug ) ) {
-		return true;
+	$ids = array();
+	$map = krv_seo_redirects();
+	foreach ( get_posts( array( 'post_type' => 'page', 'numberposts' => -1, 'fields' => 'ids' ) ) as $id ) {
+		$path = strtolower( (string) get_page_uri( $id ) );
+		// De oude pagina 'winkelwagen' valt samen met onze eigen winkelwagen (die is noindex).
+		if ( 'winkelwagen' === $path || isset( $map[ '/' . $path . '/' ] ) || krv_seo_legacy_target( $path ) ) {
+			$ids[] = (int) $id;
+		}
 	}
-	$paths = array_keys( krv_seo_redirects() );
-	return in_array( '/' . $slug . '/', $paths, true );
+	return $ids;
 }
 
 add_filter(
@@ -729,13 +825,7 @@ add_filter(
 		if ( 'page' !== $post_type ) {
 			return $args;
 		}
-		$exclude = array();
-		foreach ( get_posts( array( 'post_type' => 'page', 'numberposts' => -1, 'fields' => 'ids' ) ) as $id ) {
-			$slug = (string) get_post_field( 'post_name', $id );
-			if ( preg_match( '/^(rentmy-|tf-wishlist|cancel-appointment|add_services|add-services|all-items)/', $slug ) || isset( krv_seo_redirects()[ '/' . $slug . '/' ] ) ) {
-				$exclude[] = $id;
-			}
-		}
+		$exclude = krv_seo_excluded_page_ids();
 		if ( $exclude ) {
 			$args['post__not_in'] = array_merge( isset( $args['post__not_in'] ) ? (array) $args['post__not_in'] : array(), $exclude );
 		}
@@ -755,7 +845,48 @@ add_filter(
 		return $content;
 	}
 );
-// All in One SEO: extra pagina's.
+// Yoast: oude pagina's uit de sitemap.
+add_filter(
+	'wpseo_exclude_from_sitemap_by_post_ids',
+	function ( $ids ) {
+		return array_merge( (array) $ids, krv_seo_excluded_page_ids() );
+	}
+);
+// All in One SEO: oude pagina's uit de sitemap, werkgebied in de pagina-sitemap.
+add_filter(
+	'aioseo_sitemap_exclude_posts',
+	function ( $ids ) {
+		if ( is_string( $ids ) ) {
+			$ids = array_filter( array_map( 'intval', explode( ',', $ids ) ) );
+		}
+		return array_values( array_unique( array_merge( (array) $ids, krv_seo_excluded_page_ids() ) ) );
+	},
+	20
+);
+add_filter(
+	'aioseo_sitemap_posts',
+	function ( $entries, $post_type = '' ) {
+		if ( 'page' !== $post_type || ! is_array( $entries ) ) {
+			return $entries;
+		}
+		$skip    = array_map( 'get_permalink', krv_seo_excluded_page_ids() );
+		$entries = array_values(
+			array_filter(
+				$entries,
+				function ( $e ) use ( $skip ) {
+					return ! isset( $e['loc'] ) || ! in_array( $e['loc'], $skip, true );
+				}
+			)
+		);
+		foreach ( krv_seo_location_urls() as $u ) {
+			$entries[] = array( 'loc' => $u, 'lastmod' => gmdate( 'c' ), 'changefreq' => 'monthly', 'priority' => 0.7 );
+		}
+		return $entries;
+	},
+	20,
+	2
+);
+// All in One SEO: extra pagina's (als 'Extra pagina's' aan staat).
 add_filter(
 	'aioseo_sitemap_additional_pages',
 	function ( $pages ) {
@@ -764,6 +895,15 @@ add_filter(
 		}
 		return $pages;
 	}
+);
+// Rank Math: oude pagina's uit de sitemap.
+add_filter(
+	'rank_math/sitemap/entry',
+	function ( $url, $type, $obj = null ) {
+		return 'post' === $type && $obj && in_array( (int) $obj->ID, krv_seo_excluded_page_ids(), true ) ? false : $url;
+	},
+	10,
+	3
 );
 // Rank Math: extra URL's in de pagina-sitemap.
 add_filter(
