@@ -45,6 +45,70 @@ function krv_default_locations() {
 	);
 }
 
+/**
+ * Zelf toegevoegde plaatsen (Huurartikelen → Werkgebied (SEO)), in hetzelfde formaat
+ * als krv_default_locations().
+ */
+function krv_custom_locations() {
+	$saved = get_option( 'krv_custom_locations', array() );
+	$out   = array();
+	foreach ( is_array( $saved ) ? $saved : array() as $slug => $l ) {
+		if ( is_array( $l ) && isset( $l[0], $l[1], $l[2] ) ) {
+			$out[ $slug ] = array( (string) $l[0], (float) $l[1], (float) $l[2], (string) ( $l[3] ?? $l[0] ), (string) ( $l[4] ?? '' ) );
+		}
+	}
+	return $out;
+}
+
+/** Standaardplaatsen plus zelf toegevoegde plaatsen. */
+function krv_all_location_defs() {
+	return krv_default_locations() + krv_custom_locations();
+}
+
+/** Provincies voor de keuzelijst bij het toevoegen van een plaats. */
+function krv_provinces() {
+	return array( 'Flevoland', 'Overijssel', 'Friesland', 'Drenthe', 'Gelderland', 'Groningen', 'Noord-Holland', 'Utrecht', 'Zuid-Holland', 'Noord-Brabant', 'Zeeland', 'Limburg' );
+}
+
+/**
+ * Coördinaten, gemeente en provincie van een plaats opzoeken via OpenStreetMap (Nominatim).
+ *
+ * @return array|null [ lat, lng, gemeente, provincie ] of null als niets gevonden is.
+ */
+function krv_geocode_place( $name ) {
+	$res = wp_remote_get(
+		add_query_arg(
+			array(
+				'q'              => $name,
+				'countrycodes'   => 'nl',
+				'format'         => 'jsonv2',
+				'addressdetails' => 1,
+				'limit'          => 1,
+			),
+			'https://nominatim.openstreetmap.org/search'
+		),
+		array(
+			'timeout'    => 10,
+			'user-agent' => 'KRverhuur-website/' . KRV_VERSION . ' (' . home_url( '/' ) . ')',
+			'headers'    => array( 'Accept-Language' => 'nl' ),
+		)
+	);
+	if ( is_wp_error( $res ) || 200 !== (int) wp_remote_retrieve_response_code( $res ) ) {
+		return null;
+	}
+	$data = json_decode( wp_remote_retrieve_body( $res ), true );
+	if ( empty( $data[0]['lat'] ) || empty( $data[0]['lon'] ) ) {
+		return null;
+	}
+	$a = isset( $data[0]['address'] ) && is_array( $data[0]['address'] ) ? $data[0]['address'] : array();
+	return array(
+		(float) $data[0]['lat'],
+		(float) $data[0]['lon'],
+		(string) ( $a['municipality'] ?? $a['city'] ?? $a['town'] ?? $a['village'] ?? '' ),
+		(string) ( $a['state'] ?? '' ),
+	);
+}
+
 /** Regio's die naast de plaatsen in teksten en schema genoemd worden. */
 function krv_service_regions() {
 	return array( 'Noordoostpolder', 'Flevoland', 'Overijssel', 'Urk', 'Dronten', 'Steenwijkerland' );
@@ -73,7 +137,7 @@ function krv_locations() {
 	$saved = is_array( $saved ) ? $saved : array();
 	$base  = krv_base_location();
 	$out   = array();
-	foreach ( krv_default_locations() as $slug => $l ) {
+	foreach ( krv_all_location_defs() as $slug => $l ) {
 		$s = isset( $saved[ $slug ] ) && is_array( $saved[ $slug ] ) ? $saved[ $slug ] : array();
 		if ( isset( $s['enabled'] ) && ! $s['enabled'] ) {
 			continue;
@@ -226,16 +290,63 @@ add_action(
 			wp_die( 'Geen toegang.' );
 		}
 		$in  = isset( $_POST['loc'] ) ? wp_unslash( (array) $_POST['loc'] ) : array(); // phpcs:ignore WordPress.Security.ValidatedSanitizedInput
-		$out = array();
-		foreach ( krv_default_locations() as $slug => $l ) {
-			$row          = isset( $in[ $slug ] ) ? (array) $in[ $slug ] : array();
+		$out    = array();
+		$custom = get_option( 'krv_custom_locations', array() );
+		$custom = is_array( $custom ) ? $custom : array();
+		foreach ( krv_all_location_defs() as $slug => $l ) {
+			$row = isset( $in[ $slug ] ) ? (array) $in[ $slug ] : array();
+			if ( ! empty( $row['delete'] ) && isset( $custom[ $slug ] ) ) {
+				unset( $custom[ $slug ] );
+				continue;
+			}
 			$out[ $slug ] = array(
 				'enabled' => empty( $row['enabled'] ) ? 0 : 1,
 				'intro'   => sanitize_textarea_field( $row['intro'] ?? '' ),
 			);
 		}
 		update_option( 'krv_locations', $out );
-		wp_safe_redirect( admin_url( 'edit.php?post_type=kr_product&page=krv-locations&saved=1' ) );
+		update_option( 'krv_custom_locations', $custom );
+
+		// Nieuwe plaats toevoegen.
+		$new    = isset( $_POST['new'] ) ? wp_unslash( (array) $_POST['new'] ) : array(); // phpcs:ignore WordPress.Security.ValidatedSanitizedInput
+		$name   = trim( sanitize_text_field( $new['name'] ?? '' ) );
+		$notice = 'saved';
+		if ( '' !== $name ) {
+			$slug   = sanitize_title( $name );
+			$coords = trim( sanitize_text_field( $new['coords'] ?? '' ) );
+			$geo    = null;
+			if ( preg_match( '/^\s*(-?\d+(?:\.\d+)?)\s*[,; ]\s*(-?\d+(?:\.\d+)?)\s*$/', $coords, $m ) ) {
+				$geo = array( (float) $m[1], (float) $m[2], '', '' );
+			} elseif ( '' === $coords ) {
+				$geo = krv_geocode_place( $name );
+			}
+			if ( '' === $slug || 'overzicht' === $slug || isset( krv_all_location_defs()[ $slug ] ) ) {
+				$notice = 'exists';
+			} elseif ( ! $geo ) {
+				$notice = 'notfound';
+			} else {
+				$gemeente  = trim( sanitize_text_field( $new['gemeente'] ?? '' ) );
+				$provincie = sanitize_text_field( $new['provincie'] ?? '' );
+				if ( '' === $gemeente ) {
+					$gemeente = $geo[2] ? $geo[2] : $name;
+				}
+				if ( '' === $provincie || 'auto' === $provincie ) {
+					$provincie = $geo[3] ? $geo[3] : 'Flevoland';
+				}
+				$custom[ $slug ] = array( $name, round( $geo[0], 4 ), round( $geo[1], 4 ), $gemeente, $provincie );
+				update_option( 'krv_custom_locations', $custom );
+				$notice = 'added';
+			}
+		}
+		$args = array(
+			'post_type' => 'kr_product',
+			'page'      => 'krv-locations',
+			'saved'     => $notice,
+		);
+		if ( 'saved' !== $notice ) {
+			$args['plaats'] = rawurlencode( $name );
+		}
+		wp_safe_redirect( add_query_arg( $args, admin_url( 'edit.php' ) ) );
 		exit;
 	}
 );
@@ -247,7 +358,20 @@ function krv_locations_page() {
 	?>
 	<div class="wrap">
 		<h1>Werkgebied (SEO)</h1>
-		<?php if ( ! empty( $_GET['saved'] ) ) : // phpcs:ignore WordPress.Security.NonceVerification ?>
+		<?php
+		// phpcs:disable WordPress.Security.NonceVerification
+		$notice = isset( $_GET['saved'] ) ? sanitize_key( $_GET['saved'] ) : '';
+		$plaats = isset( $_GET['plaats'] ) ? sanitize_text_field( rawurldecode( wp_unslash( $_GET['plaats'] ) ) ) : '';
+		// phpcs:enable
+		$custom = krv_custom_locations();
+		?>
+		<?php if ( 'added' === $notice ) : ?>
+			<div class="notice notice-success is-dismissible"><p><strong><?php echo esc_html( $plaats ); ?></strong> is toegevoegd aan het werkgebied. <a href="<?php echo esc_url( krv_location_url( sanitize_title( $plaats ) ) ); ?>" target="_blank">Bekijk de pagina</a>. Controleer de gemeente en afstand hieronder.</p></div>
+		<?php elseif ( 'exists' === $notice ) : ?>
+			<div class="notice notice-error"><p><strong><?php echo esc_html( $plaats ); ?></strong> staat al in het werkgebied.</p></div>
+		<?php elseif ( 'notfound' === $notice ) : ?>
+			<div class="notice notice-error"><p><strong><?php echo esc_html( $plaats ); ?></strong> is niet automatisch gevonden. Controleer de spelling, of vul de coördinaten zelf in (in Google Maps: rechtsklik op de plaats en klik op de getallen bovenaan om ze te kopiëren).</p></div>
+		<?php elseif ( $notice ) : ?>
 			<div class="notice notice-success is-dismissible"><p>Werkgebied opgeslagen.</p></div>
 		<?php endif; ?>
 		<p>Voor elke plaats in het werkgebied is er een eigen pagina, bijv. <a href="<?php echo esc_url( krv_location_url( 'urk' ) ); ?>" target="_blank"><?php echo esc_html( krv_location_url( 'urk' ) ); ?></a>, en een overzicht op <a href="<?php echo esc_url( krv_service_area_url() ); ?>" target="_blank"><?php echo esc_html( krv_service_area_url() ); ?></a>.
@@ -259,19 +383,40 @@ function krv_locations_page() {
 			<table class="widefat striped" style="max-width:1100px">
 				<thead><tr><th style="width:60px">Actief</th><th style="width:160px">Plaats</th><th style="width:170px">Gemeente / afstand</th><th>Eigen tekst (optioneel)</th></tr></thead>
 				<tbody>
-				<?php foreach ( krv_default_locations() as $slug => $l ) : ?>
+				<?php foreach ( krv_all_location_defs() as $slug => $l ) : ?>
 					<?php
 					$row     = isset( $saved[ $slug ] ) ? $saved[ $slug ] : array();
 					$enabled = ! isset( $row['enabled'] ) || $row['enabled'];
 					?>
 					<tr>
 						<td><input type="checkbox" name="loc[<?php echo esc_attr( $slug ); ?>][enabled]" value="1" <?php checked( $enabled ); ?>></td>
-						<td><strong><?php echo esc_html( $l[0] ); ?></strong><br><a href="<?php echo esc_url( krv_location_url( $slug ) ); ?>" target="_blank">Bekijk pagina</a></td>
+						<td><strong><?php echo esc_html( $l[0] ); ?></strong><br><a href="<?php echo esc_url( krv_location_url( $slug ) ); ?>" target="_blank">Bekijk pagina</a>
+							<?php if ( isset( $custom[ $slug ] ) ) : ?>
+								<br><label style="color:#b32d2e"><input type="checkbox" name="loc[<?php echo esc_attr( $slug ); ?>][delete]" value="1"> Verwijderen</label>
+							<?php endif; ?>
+						</td>
 						<td><?php echo esc_html( $l[3] . ', ' . $l[4] ); ?><br><span class="description">ca. <?php echo (int) krv_distance_km( $base['lat'], $base['lng'], $l[1], $l[2] ); ?> km</span></td>
 						<td><textarea name="loc[<?php echo esc_attr( $slug ); ?>][intro]" rows="2" style="width:100%" placeholder="Bijv. Al jaren verzorgen we in <?php echo esc_attr( $l[0] ); ?> de verhuur voor bruiloften, verjaardagen en het dorpsfeest."><?php echo esc_textarea( $row['intro'] ?? '' ); ?></textarea></td>
 					</tr>
 				<?php endforeach; ?>
 				</tbody>
+			</table>
+
+			<h2 style="margin-top:28px">Plaats toevoegen</h2>
+			<p>Vul de naam van een plaats in en klik op <em>Werkgebied opslaan</em>. Ligging, afstand, gemeente en provincie worden automatisch opgezocht; de plaats krijgt meteen een eigen pagina en komt in de sitemap, de footer en het overzicht.</p>
+			<table class="form-table" style="max-width:1100px">
+				<tr><th><label for="krv-new-name">Plaats</label></th><td><input type="text" class="regular-text" id="krv-new-name" name="new[name]" placeholder="Bijv. Luttelgeest"></td></tr>
+				<tr><th><label for="krv-new-gemeente">Gemeente</label></th><td><input type="text" class="regular-text" id="krv-new-gemeente" name="new[gemeente]" placeholder="Leeg laten = automatisch"></td></tr>
+				<tr><th><label for="krv-new-prov">Provincie</label></th><td>
+					<select id="krv-new-prov" name="new[provincie]">
+						<option value="auto">Automatisch</option>
+						<?php foreach ( krv_provinces() as $prov ) : ?>
+							<option value="<?php echo esc_attr( $prov ); ?>"><?php echo esc_html( $prov ); ?></option>
+						<?php endforeach; ?>
+					</select>
+				</td></tr>
+				<tr><th><label for="krv-new-coords">Coördinaten</label></th><td><input type="text" class="regular-text" id="krv-new-coords" name="new[coords]" placeholder="Leeg laten = automatisch, bijv. 52.7406, 5.8370">
+					<p class="description">Alleen nodig als de plaats niet automatisch gevonden wordt. In Google Maps: rechtsklik op de plaats en klik op de getallen om ze te kopiëren.</p></td></tr>
 			</table>
 			<?php submit_button( 'Werkgebied opslaan' ); ?>
 		</form>
