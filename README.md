@@ -60,6 +60,10 @@ Alle e-mails zijn HTML-mails in de huisstijl (lettertype Aptos: tekst 12pt, deta
 
 E-mailadres, telefoonnummer, bedrijfsnaam, adres (straat, postcode en plaats) en werkgebied staan bij **Boekingen → Instellingen → Bedrijf & contact**. Ze worden gebruikt in de header/footer van de website, het contactblok op de homepage en in alle e-mails. Het adres waar meldingen van nieuwe bestellingen heen gaan stel je daar apart in.
 
+## Gesloten dagen
+
+Bij **Boekingen → Instellingen → Reserveren** vink je vaste gesloten dagen aan (bijv. elke zondag) en vul je losse datums of periodes in (feestdagen, vakantie; één per regel, bijv. `25-12-2026 t/m 26-12-2026 Kerst`). Op een gesloten dag kan een huurperiode niet beginnen of eindigen; in de kalender zijn die dagen gestreept en niet te kiezen. Standaard mag een periode wel over een gesloten dag heen lopen (zaterdag t/m maandag); dat kun je uitzetten. Boekingen die je zelf in wp-admin invoert, zijn hier niet aan gebonden.
+
 ## Hoe reserveren werkt (winkelwagen)
 
 1. De klant kiest op de productpagina één dag (één klik) of een periode (twee klikken). Volgeboekte dagen zijn doorgestreept; bij artikelen met voorraad telt het gekozen aantal mee, inclusief wat al in de winkelwagen zit.

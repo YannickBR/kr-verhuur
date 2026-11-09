@@ -97,6 +97,13 @@ function krv_validate_booking( $in, $opts = array() ) {
 		if ( $days > $product['max_days'] ) {
 			return new WP_Error( 'krv_dates', sprintf( 'Maximaal %d dagen per reservering.', $product['max_days'] ) );
 		}
+		// Gesloten dagen: niet beginnen of eindigen, en zo ingesteld ook niet overheen huren.
+		$check = krv_setting( 'closed_inside' ) ? array_unique( array( $start, $end ) ) : krv_date_range( $start, $end );
+		foreach ( $check as $d ) {
+			if ( krv_is_closed_day( $d ) ) {
+				return new WP_Error( 'krv_dates', sprintf( 'Op %s zijn we gesloten. Kies een andere huurperiode voor %s.', krv_pretty_date( $d ), $product['name'] ) );
+			}
+		}
 	}
 
 	$quantity = isset( $in['quantity'] ) ? max( 1, (int) $in['quantity'] ) : 1;

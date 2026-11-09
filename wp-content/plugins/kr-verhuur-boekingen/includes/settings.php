@@ -23,6 +23,9 @@ function krv_default_settings() {
 		'display_vat'     => 'incl', // Standaardweergave op de website: 'incl' of 'excl' btw.
 		'vat_toggle'      => 1,      // Bezoeker mag zelf wisselen tussen incl. en excl. btw.
 		'terms_page'      => 0,      // Pagina met de algemene voorwaarden.
+		'closed_weekdays' => array(), // Vaste gesloten dagen: 0 = zondag … 6 = zaterdag.
+		'closed_dates'    => '',      // Losse gesloten dagen/periodes, één per regel.
+		'closed_inside'   => 1,       // Huurperiode mag over een gesloten dag heen lopen.
 	);
 }
 
@@ -78,6 +81,82 @@ function krv_statuses() {
 function krv_terms_url() {
 	$id = (int) krv_setting( 'terms_page' );
 	return $id && 'publish' === get_post_status( $id ) ? get_permalink( $id ) : '';
+}
+
+/* ---------------------------------------------------------------------------
+ * Gesloten dagen: geen ophalen/bezorgen of terugbrengen
+ * ------------------------------------------------------------------------- */
+
+/** Vaste gesloten weekdagen (0 = zondag … 6 = zaterdag). */
+function krv_closed_weekdays() {
+	$days = krv_setting( 'closed_weekdays' );
+	return array_values( array_unique( array_map( 'intval', array_intersect( (array) $days, range( 0, 6 ) ) ) ) );
+}
+
+/** Datum uit "2026-12-25" of "25-12-2026" (ook met / of .), of '' als ongeldig. */
+function krv_parse_closed_date( $s ) {
+	if ( preg_match( '/^(\d{4})[-\/.](\d{1,2})[-\/.](\d{1,2})$/', $s, $m ) ) {
+		$iso = sprintf( '%04d-%02d-%02d', $m[1], $m[2], $m[3] );
+	} elseif ( preg_match( '/^(\d{1,2})[-\/.](\d{1,2})[-\/.](\d{4})$/', $s, $m ) ) {
+		$iso = sprintf( '%04d-%02d-%02d', $m[3], $m[2], $m[1] );
+	} else {
+		return '';
+	}
+	return krv_valid_date( $iso ) ? $iso : '';
+}
+
+/**
+ * Losse gesloten dagen: [ 'YYYY-MM-DD' => true ]. Per regel één datum of een periode
+ * (twee datums, bijv. "24-12-2026 t/m 26-12-2026"); tekst erachter mag (bijv. "Kerst").
+ */
+function krv_closed_dates() {
+	static $cache = null;
+	if ( null !== $cache ) {
+		return $cache;
+	}
+	$cache = array();
+	foreach ( preg_split( '/\r?\n/', (string) krv_setting( 'closed_dates' ) ) as $line ) {
+		preg_match_all( '/\d{1,4}[-\/.]\d{1,2}[-\/.]\d{1,4}/', $line, $m );
+		$dates = array_values( array_filter( array_map( 'krv_parse_closed_date', $m[0] ) ) );
+		if ( ! $dates ) {
+			continue;
+		}
+		$from = $dates[0];
+		$to   = isset( $dates[1] ) ? $dates[1] : $from;
+		if ( $to < $from ) {
+			list( $from, $to ) = array( $to, $from );
+		}
+		foreach ( array_slice( krv_date_range( $from, $to ), 0, 400 ) as $d ) {
+			$cache[ $d ] = true;
+		}
+	}
+	return $cache;
+}
+
+/** Zijn we op deze dag gesloten? */
+function krv_is_closed_day( $iso ) {
+	if ( isset( krv_closed_dates()[ $iso ] ) ) {
+		return true;
+	}
+	$ts = strtotime( $iso . ' 12:00:00 UTC' );
+	return $ts && in_array( (int) gmdate( 'w', $ts ), krv_closed_weekdays(), true );
+}
+
+/** Gesloten dagen voor de kalender op de website. */
+function krv_closed_for_js() {
+	$today = krv_today();
+	$max   = wp_date( 'Y-m-d', strtotime( '+' . ( (int) krv_setting( 'max_days_ahead' ) + 1 ) . ' days' ) );
+	$dates = array();
+	foreach ( array_keys( krv_closed_dates() ) as $d ) {
+		if ( $d >= $today && $d <= $max ) {
+			$dates[] = $d;
+		}
+	}
+	return array(
+		'weekdays' => krv_closed_weekdays(),
+		'dates'    => $dates,
+		'inside'   => krv_setting( 'closed_inside' ) ? 1 : 0,
+	);
 }
 
 /** Statussen die de agenda blokkeren. */

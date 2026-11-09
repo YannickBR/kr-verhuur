@@ -39,6 +39,9 @@ add_action(
 			'min_lead_days'   => max( 0, (int) ( $in['min_lead_days'] ?? 1 ) ),
 			'max_days_ahead'  => max( 7, (int) ( $in['max_days_ahead'] ?? 365 ) ),
 			'blocking_status' => array_values( array_intersect( (array) ( $in['blocking_status'] ?? array() ), array( 'pending', 'confirmed' ) ) ),
+			'closed_weekdays' => array_values( array_map( 'intval', array_intersect( (array) ( $in['closed_weekdays'] ?? array() ), array( '0', '1', '2', '3', '4', '5', '6' ) ) ) ),
+			'closed_dates'    => sanitize_textarea_field( $in['closed_dates'] ?? '' ),
+			'closed_inside'   => empty( $in['closed_inside'] ) ? 0 : 1,
 		);
 		$settings['vat_rate']        = max( 0, min( 100, (float) str_replace( ',', '.', $in['vat_rate'] ?? 21 ) ) );
 		$settings['prices_incl_vat'] = ( $in['prices_incl_vat'] ?? '1' ) === '1' ? 1 : 0;
@@ -129,6 +132,18 @@ function krv_settings_page() {
 					<label><input type="checkbox" name="krv[blocking_status][]" value="pending" <?php checked( in_array( 'pending', $s['blocking_status'], true ) ); ?>> Aanvraag</label>&nbsp;&nbsp;
 					<label><input type="checkbox" name="krv[blocking_status][]" value="confirmed" <?php checked( in_array( 'confirmed', $s['blocking_status'], true ) ); ?>> Bevestigd</label>
 					<p class="description">Standaard blokkeren ook nog niet bevestigde aanvragen de agenda, zodat er niet dubbel geboekt wordt.</p></td></tr>
+				<tr><th>Gesloten dagen (vast)</th><td>
+					<?php $closed = array_map( 'intval', (array) $s['closed_weekdays'] ); ?>
+					<?php foreach ( array( 1 => 'Maandag', 2 => 'Dinsdag', 3 => 'Woensdag', 4 => 'Donderdag', 5 => 'Vrijdag', 6 => 'Zaterdag', 0 => 'Zondag' ) as $num => $label ) : ?>
+						<label style="margin-right:12px"><input type="checkbox" name="krv[closed_weekdays][]" value="<?php echo (int) $num; ?>" <?php checked( in_array( $num, $closed, true ) ); ?>> <?php echo esc_html( $label ); ?></label>
+					<?php endforeach; ?>
+					<p class="description">Op gesloten dagen kan een huurperiode niet beginnen of eindigen (geen ophalen, bezorgen of terugbrengen). In de kalender op de website zijn ze grijs en niet te kiezen.</p></td></tr>
+				<tr><th><label for="closed_dates">Gesloten dagen (losse datums)</label></th><td>
+					<textarea class="large-text code" rows="4" id="closed_dates" name="krv[closed_dates]" placeholder="25-12-2026 Eerste kerstdag&#10;27-07-2027 t/m 09-08-2027 Vakantie"><?php echo esc_textarea( $s['closed_dates'] ); ?></textarea>
+					<p class="description">Eén datum of periode per regel (dd-mm-jjjj), bijv. feestdagen of vakantie. Tekst erachter mag als notitie. Voorbije datums mag je laten staan of weghalen.</p></td></tr>
+				<tr><th>Over gesloten dagen heen huren</th><td>
+					<label><input type="checkbox" name="krv[closed_inside]" value="1" <?php checked( ! empty( $s['closed_inside'] ) ); ?>> Een huurperiode mag over een gesloten dag heen lopen</label>
+					<p class="description">Bijv. zaterdag t/m maandag bij gesloten zondag. Uitgevinkt: een gesloten dag mag nergens in de huurperiode vallen.</p></td></tr>
 				<tr><th><label for="terms_page">Algemene voorwaarden</label></th><td>
 					<?php
 					wp_dropdown_pages(

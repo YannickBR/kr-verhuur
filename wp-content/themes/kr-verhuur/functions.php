@@ -145,6 +145,7 @@ add_action(
 					'today'      => krv_today(),
 					'minLead'    => (int) krv_setting( 'min_lead_days' ),
 					'maxAhead'   => (int) krv_setting( 'max_days_ahead' ),
+					'closed'     => function_exists( 'krv_closed_for_js' ) ? krv_closed_for_js() : null,
 					'icons'      => krt_icons_for_js(),
 					'termsUrl'   => krv_terms_url(),
 				)
@@ -174,6 +175,7 @@ add_action(
 					'nonce'     => wp_create_nonce( 'wp_rest' ),
 					'minLead'   => (int) krv_setting( 'min_lead_days' ),
 					'maxAhead'  => (int) krv_setting( 'max_days_ahead' ),
+					'closed'    => function_exists( 'krv_closed_for_js' ) ? krv_closed_for_js() : null,
 					'today'     => krv_today(),
 					'icons'     => krt_icons_for_js(),
 					'cartUrl'    => krv_cart_url(),

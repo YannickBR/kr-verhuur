@@ -259,6 +259,9 @@ p { margin: 0 0 1em; }
 .cal-day.empty { background: transparent; cursor: default; }
 .cal-day:disabled { color: #b5c1c8; background: transparent; cursor: not-allowed; }
 .cal-day.booked { color: #c9a3a1; text-decoration: line-through; background: #fbf1f0; }
+.cal-day.closed { color: #a9b3b8; background: repeating-linear-gradient(135deg, #f1f3f4 0 4px, #e7eaec 4px 8px); }
+.cal-day.closed.in-range { color: #7f8b91; }
+.cal-legend-closed { background: repeating-linear-gradient(135deg, #f1f3f4 0 3px, #dfe3e5 3px 6px); border: 1px solid var(--line); }
 .cal-day.today::after { content: ""; position: absolute; bottom: 6px; left: 50%; width: 4px; height: 4px; margin-left: -2px; border-radius: 50%; background: var(--green); }
 .cal-day.in-range { background: var(--green-soft); border-radius: 0; }
 .cal-day.start, .cal-day.end { background: var(--green); color: var(--white); }

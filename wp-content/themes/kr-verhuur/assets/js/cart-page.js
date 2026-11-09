@@ -177,6 +177,7 @@
       minDate: D.iso(D.addDays(D.parse(CFG.today), Number(CFG.minLead) || 0)),
       maxDate: D.iso(D.addDays(D.parse(CFG.today), Number(CFG.maxAhead) || 365)),
       maxDays: Number(editing.data.max_days) || 365,
+      closed: CFG.closed,
       start: editing.start,
       end: editing.end,
       icons,

@@ -7,6 +7,8 @@
  *     minDate, maxDate,            // "YYYY-MM-DD"
  *     today,                       // "YYYY-MM-DD" (tijdzone van de site)
  *     maxDays: 7,                  // maximale lengte van een periode
+ *     closed: { weekdays: [0], dates: ["2026-12-25"], inside: 1 },  // gesloten dagen (optioneel):
+ *                                  // niet als begin- of einddag te kiezen; inside = mag erbinnen vallen
  *     onChange({ start, end, days })  // start/end als "YYYY-MM-DD" (of null)
  *   });
  *   cal.refresh();                 // opnieuw tekenen na wijziging beschikbaarheid/aantal
@@ -42,6 +44,12 @@ KR.Calendar = function (el, opts) {
   const minIso = opts.minDate || todayIso;
   const maxIso = opts.maxDate || D.iso(D.addDays(D.parse(todayIso), 365));
   const maxDays = opts.maxDays || 365;
+  const closed = opts.closed || {};
+  const closedDays = (closed.weekdays || []).map(Number);
+  const closedDates = new Set(closed.dates || []);
+  const closedInside = closed.inside === undefined || Number(closed.inside) === 1;
+  const hasClosed = closedDays.length > 0 || closedDates.size > 0;
+  const isClosed = (iso) => closedDates.has(iso) || closedDays.indexOf(D.parse(iso).getDay()) !== -1;
 
   let start = opts.start || null;
   let end = opts.start ? opts.end || opts.start : null;
@@ -49,12 +57,23 @@ KR.Calendar = function (el, opts) {
   view = new Date(view.getFullYear(), view.getMonth(), 1);
   let message = "";
 
-  const available = (iso) => iso >= minIso && iso <= maxIso && !isBooked(iso);
+  const open = (iso) => iso >= minIso && iso <= maxIso && !isBooked(iso); // vrij (gesloten telt niet mee)
+  const available = (iso) => open(iso) && !isClosed(iso); // te kiezen als begin- of einddag
 
-  // Is de hele periode vrij?
+  // Is de hele periode vrij? Begin en eind mogen niet op een gesloten dag vallen.
   function rangeFree(a, b) {
+    if (isClosed(a) || isClosed(b)) return false;
     for (let d = D.parse(a); D.iso(d) <= b; d = D.addDays(d, 1)) {
-      if (!available(D.iso(d))) return false;
+      const iso = D.iso(d);
+      if (!open(iso) || (!closedInside && isClosed(iso))) return false;
+    }
+    return true;
+  }
+
+  // Ligt het probleem alleen aan gesloten dagen (geen bezette dagen)?
+  function rangeHasOnlyClosed(a, b) {
+    for (let d = D.parse(a); D.iso(d) <= b; d = D.addDays(d, 1)) {
+      if (!open(D.iso(d))) return false;
     }
     return true;
   }
@@ -74,7 +93,9 @@ KR.Calendar = function (el, opts) {
       if (len > maxDays) {
         message = "Maximaal " + maxDays + " dagen per reservering.";
       } else if (!rangeFree(start, iso)) {
-        message = "Er zit een bezette dag in deze periode. Kies een andere periode.";
+        message = rangeHasOnlyClosed(start, iso)
+          ? "Op gesloten dagen kunnen we niet leveren of ophalen. Kies een andere periode."
+          : "Er zit een bezette dag in deze periode. Kies een andere periode.";
         start = iso;
       } else {
         end = iso;
@@ -109,7 +130,9 @@ KR.Calendar = function (el, opts) {
       const iso = D.iso(new Date(y, m, day));
       const cls = ["cal-day"];
       const booked = iso >= minIso && iso <= maxIso && isBooked(iso);
+      const shut = !booked && iso >= minIso && iso <= maxIso && isClosed(iso);
       if (booked) cls.push("booked");
+      if (shut) cls.push("closed");
       if (iso === todayIso) cls.push("today");
       if (start && iso === start) cls.push("start");
       if (rangeEnd && iso === rangeEnd) cls.push("end");
@@ -117,7 +140,7 @@ KR.Calendar = function (el, opts) {
       const dis = !available(iso);
       cells +=
         '<button type="button" class="' + cls.join(" ") + '" data-date="' + iso + '"' + (dis ? " disabled" : "") +
-        ' aria-label="' + D.pretty(iso) + (booked ? " (bezet)" : "") + '"' +
+        ' aria-label="' + D.pretty(iso) + (booked ? " (bezet)" : shut ? " (gesloten)" : "") + '"' +
         (start && iso >= start && iso <= rangeEnd ? ' aria-pressed="true"' : "") + ">" + day + "</button>";
     }
 
@@ -137,6 +160,7 @@ KR.Calendar = function (el, opts) {
       '<div class="cal-grid">' + cells + "</div>" +
       '<div class="cal-legend"><span><i style="background:var(--green)"></i>Geselecteerd</span>' +
       '<span><i style="background:#fbf1f0;border:1px solid #e8c9c6"></i>Bezet</span>' +
+      (hasClosed ? '<span><i class="cal-legend-closed"></i>Gesloten</span>' : "") +
       '<span><i style="background:var(--bg);border:1px solid var(--line)"></i>Beschikbaar</span></div>' +
       '<div class="cal-hint" aria-live="polite">' + hint + "</div></div>";
   }

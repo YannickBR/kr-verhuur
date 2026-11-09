@@ -118,6 +118,7 @@ window.KR = window.KR || {};
         minDate: D.iso(D.addDays(D.parse(CFG.today), minLead)),
         maxDate: D.iso(D.addDays(D.parse(CFG.today), maxAhead)),
         maxDays: p.maxDays,
+        closed: CFG.closed,
         icons,
         onChange(sel) {
           state.start = sel.start;
